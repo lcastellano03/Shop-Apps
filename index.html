@@ -52,9 +52,9 @@ function show(on){gate.hidden=on;apps.hidden=!on;if(!on)pw.focus()}
 function stored(){try{return sessionStorage.getItem(KEY)===HASH}catch(e){return false}}
 function sha(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(d){return Array.from(new Uint8Array(d)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")})}
 gate.addEventListener("submit",function(ev){ev.preventDefault();sha(pw.value.trim()).then(function(h){
-if(h===HASH){try{sessionStorage.setItem(KEY,HASH)}catch(e){}err.textContent="";pw.value="";show(true)}
+if(h===HASH){try{sessionStorage.setItem(KEY,HASH);sessionStorage.setItem("glue-pw",pw.value.trim())}catch(e){}err.textContent="";pw.value="";show(true)}
 else{err.textContent="Incorrect passcode";pw.value="";pw.focus()}})});
-document.getElementById("lock").addEventListener("click",function(){try{sessionStorage.removeItem(KEY)}catch(e){}show(false)});
+document.getElementById("lock").addEventListener("click",function(){try{sessionStorage.removeItem(KEY);sessionStorage.removeItem("glue-pw")}catch(e){}show(false)});
 show(stored());
 })();
 </script></body></html>
