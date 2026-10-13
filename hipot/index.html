@@ -148,6 +148,41 @@ var S=load();
 function load(){try{var j=JSON.parse(localStorage.getItem(LS));if(j&&j.info){var f=fresh();for(var k in f)if(!(k in j))j[k]=f[k];return j}}catch(e){}return fresh()}
 var saveOk=true;
 function save(){try{localStorage.setItem(LS,JSON.stringify(S));saveOk=true}catch(e){saveOk=false;alert("Could not save to this browser (storage blocked or full). Export a backup from Settings.")}}
+/* ---------- shared settings (config.json in the repo, loaded by every device) ---------- */
+var GH={repo:"lcastellano03/Shop-Apps",branch:"main",path:"hipot/config.json"},TK="hipot-gh-token";
+var cfgMsg="",pubMsg="",pubBusy=false;
+function settingsOf(o){return{info:o.info,operators:o.operators,parts:o.parts,volts:o.volts,samples:o.samples,ownerHash:o.ownerHash||""}}
+function snap(){return JSON.stringify(settingsOf(S))}
+function hasSettings(){return S.parts.length>0||S.volts.some(function(v){return v!==""})}
+function unpublished(){return S.pubSnap!==undefined?S.pubSnap!==snap():hasSettings()}
+function applyConfig(c){var keep=S.operator;["info","operators","parts","volts","samples"].forEach(function(k){if(c[k]!=null)S[k]=c[k]});
+  var f=fresh();S.info=Object.assign({},f.info,S.info);while(S.samples.length<MAXS)S.samples.push("");
+  S.ownerHash=c.ownerHash||"";S.operator=S.operators.indexOf(keep)>=0?keep:"";S.pubSnap=snap();save()}
+function loadConfig(){
+  fetch("config.json?t="+Date.now(),{cache:"no-store"}).then(function(r){
+    if(r.status===404){cfgMsg="none";return}
+    if(!r.ok)throw new Error(r.status);
+    return r.json().then(function(c){
+      if(S.pubSnap!==undefined&&S.pubSnap!==snap()){cfgMsg="local";return}  // owner has unpublished edits on this device
+      applyConfig(c);cfgMsg="loaded"})
+  }).catch(function(){cfgMsg="offline"}).then(function(){if(!/^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement||{}).tagName||""))render()})}
+function loadConfigForce(){fetch("config.json?t="+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(c){applyConfig(c);cfgMsg="loaded";pubMsg="Loaded the published settings."}).catch(function(){S.pubSnap=undefined;pubMsg="No published settings could be loaded."}).then(render)}
+function b64(t){return btoa(unescape(encodeURIComponent(t)))}
+function publish(){
+  var tok="";try{tok=localStorage.getItem(TK)||""}catch(e){}
+  if(!tok){pubMsg="Paste your GitHub token first.";render();return}
+  pubBusy=true;pubMsg="Publishing…";render();
+  var api="https://api.github.com/repos/"+GH.repo+"/contents/"+GH.path,h={Authorization:"Bearer "+tok,Accept:"application/vnd.github+json"};
+  fetch(api+"?ref="+GH.branch,{headers:h,cache:"no-store"}).then(function(g){
+    if(g.status===404)return undefined;
+    if(!g.ok)throw new Error(g.status===401||g.status===403?"GitHub rejected the token (check it has Contents: read & write on "+GH.repo+")":"GitHub error "+g.status);
+    return g.json().then(function(j){return j.sha})
+  }).then(function(sha){
+    var body=JSON.stringify(Object.assign({updated:new Date().toISOString()},settingsOf(S)),null,1),mine=snap();
+    return fetch(api,{method:"PUT",headers:h,body:JSON.stringify({message:"Update hipot settings",content:b64(body),sha:sha,branch:GH.branch})}).then(function(r){
+      if(!r.ok)throw new Error(r.status===401||r.status===403?"GitHub rejected the token (check it has Contents: read & write on "+GH.repo+")":"GitHub error "+r.status);
+      S.pubSnap=mine;save();pubMsg="Published ✔ — other devices pick it up within a couple of minutes.";cfgMsg="loaded"})
+  }).catch(function(e){pubMsg="Publish failed: "+(e.message||e)}).then(function(){pubBusy=false;render()})}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
 function f3(x){return x==null||x===""?"":(typeof x==="number"?x.toFixed(3):x)}
@@ -320,6 +355,14 @@ function rSettings(){
   var I=S.info;
   function inp(path,val,type,label,extra){return'<div><label class="f">'+label+'</label><input type="'+(type||"text")+'" data-path="'+path+'" value="'+esc(val)+'" '+(extra||"")+'></div>'}
   var h='<div class="row" style="justify-content:space-between"><h1>Settings</h1><button class="btn sm" data-act="lock">Lock settings</button></div><p class="sub">Owner page – changes save automatically. Readings already recorded keep the values they were entered with.</p>';
+  var un=unpublished(),tk="";try{tk=localStorage.getItem(TK)||""}catch(e){}
+  h+='<div class="card" style="margin-bottom:16px"><h3>Shared settings</h3>'
+   +'<div class="banner '+(un?'warn':'go')+'" style="margin:0 0 12px">'+(un?'You have changes that aren\'t published yet – other devices still use the previous settings.':'Everyone is using these settings.')+'</div>'
+   +'<p class="note" style="margin:0 0 10px">Settings you change here apply to every device that opens the app once you publish them. Readings stay on the device they were entered on.</p>'
+   +'<label class="f" for="ghtoken">GitHub token (stays on this device only)</label><input type="password" id="ghtoken" autocomplete="off" value="'+esc(tk)+'" placeholder="github_pat_…">'
+   +'<p class="note">Create a fine-grained token at github.com → Settings → Developer settings, limited to <b>'+esc(GH.repo)+'</b> with <b>Contents: Read and write</b>. Only needed on the device you edit from.</p>'
+   +'<div class="row" style="margin-top:10px"><button class="btn primary" data-act="publish"'+(pubBusy?' disabled':'')+'>Publish settings</button><button class="btn" data-act="reloadcfg">Discard my edits &amp; reload published</button></div>'
+   +'<div class="note" role="status" style="margin-top:8px">'+esc(pubMsg)+(cfgMsg==="offline"?' Could not reach the published settings (offline?) – using this device\'s copy.':cfgMsg==="none"?' No published settings yet – publish once to share them.':'')+'</div></div>';
   h+='<div class="card"><h3>Study info</h3><div class="grid">'+inp("info.testerId",I.testerId,"text","Hipot tester ID")+inp("info.fixtureId",I.fixtureId,"text","Fixture / lead set ID")+inp("info.date",I.date,"date","Study date")+inp("info.ramp",I.ramp,"text","Ramp / dwell time")+inp("info.trials",I.trials,"number","Trials per sample",'min="1" max="50" step="1"')+inp("info.tripMa",I.tripMa,"number","Trip / max reading (mA) for “Tester tripped” button",'min="0" step="any" placeholder="blank = no button"')+'</div></div>';
   h+='<div class="card"><h3>Test voltages (up to 6)</h3><p class="note" style="margin:0 0 10px">Leave unused voltages blank. Each active voltage gets its own run of every sample.</p><div class="grid">'+S.volts.map(function(v,i){return inp("volts."+i,v,"number","V"+(i+1)+" (volts)",'min="0" step="any"')}).join("")+'</div></div>';
   h+='<div class="card"><h3>Operators</h3><div class="grid">'+S.operators.map(function(o,i){return'<div><label class="f">Operator '+(i+1)+'</label><div class="row" style="flex-wrap:nowrap"><input type="text" data-path="operators.'+i+'" value="'+esc(o)+'"><button class="btn sm danger" data-rmop="'+i+'" aria-label="Remove operator">✕</button></div></div>'}).join("")+'</div><p style="margin:12px 0 0"><button class="btn sm" data-act="addop">+ Add operator</button></p><p class="note">One operator for a standard study. With several, the Test page shows a picker.</p></div>';
@@ -354,7 +397,7 @@ function addReading(ma,tripped){
 
 function loadDemo(withReadings){
   var keep=S.ownerHash,g=uid(),b=uid();
-  S=fresh();S.ownerHash=keep;
+  S=fresh();S.ownerHash=keep;S.pubSnap="";
   S.info={testerId:"DEMO-HP-01",fixtureId:"DEMO-FX-02",date:new Date().toISOString().slice(0,10),ramp:"1.0 s ramp / 2.0 s dwell",trials:10,tripMa:"10"};
   S.operators=["Demo Operator"];S.operator="Demo Operator";
   S.volts=[1200,1500,"","","",""];
@@ -395,6 +438,8 @@ document.addEventListener("click",function(ev){
     case"addpart":S.parts.push({id:uid(),pn:"",status:"Good",min:"0",max:"",lim:{}});save();render();break;
     case"backup":download("hipot-rr-backup-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(S),"application/json");break;
     case"demoset":case"demodata":var wr=el.dataset.act==="demodata";if(confirm("Replace the current setup"+(S.readings.length?" and "+S.readings.length+" readings":"")+" with demo values?")){loadDemo(wr);cur={set:null,sample:null};flash=null;render()}break;
+    case"publish":publish();break;
+    case"reloadcfg":if(confirm("Throw away unpublished changes on this device and load the published settings?")){S.pubSnap=undefined;pubMsg="";loadConfigForce()}break;
     case"clearread":askPin("Owner PIN to delete ALL readings:",function(){if(confirm("Delete all "+S.readings.length+" readings? This cannot be undone."))S.readings=[],save(),render()});break;
     case"changepin":askPin("Current owner PIN:",function(){S.ownerHash="";save();ownerOpen=false;pinMsg="";render()});break}});
 document.addEventListener("change",function(ev){var t=ev.target;
@@ -403,13 +448,15 @@ document.addEventListener("change",function(ev){var t=ev.target;
   else if(t.id==="selOp"){S.operator=t.value;save();render()}
   else if(t.id==="dataSet"){dataSet=+t.value;render()}
   else if(t.id==="restore"){var f=t.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{var j=JSON.parse(fr.result);if(!j.info||!j.readings)throw 0;
-    if(confirm("Replace everything in this browser with the backup ("+j.readings.length+" readings)?")){var keep=S.ownerHash;S=j;if(!S.ownerHash)S.ownerHash=keep;save();render()}}catch(e){alert("That file isn't a valid backup.")}};fr.readAsText(f)}
+    if(confirm("Replace everything in this browser with the backup ("+j.readings.length+" readings)?")){var keep=S.ownerHash;S=j;if(!S.ownerHash)S.ownerHash=keep;S.pubSnap="";save();render()}}catch(e){alert("That file isn't a valid backup.")}};fr.readAsText(f)}
+  else if(t.id==="ghtoken"){try{localStorage.setItem(TK,t.value.trim())}catch(e){}}
   else if(t.dataset.edit){var r=S.readings.find(function(x){return x.id===t.dataset.edit}),v=num(String(t.value).replace(",","."));if(r&&v!=null&&v>=0){r.ma=v;save()}render()}
   else if(t.dataset.sample!=null){S.samples[+t.dataset.sample]=t.value;save();render()}
   else if(t.dataset.path){var p=t.dataset.path,val=t.value;
     if(/\.(min|max)$/.test(p)||/^volts\./.test(p)||p==="info.trials"||p==="info.tripMa"){if(val.trim()===""){val=""}else{var nv=num(val);val=nv==null?"":nv}}
     setPath(p,val);save();if(/^(volts|parts\.\d+\.pn|parts\.\d+\.status|operators|info\.trials)/.test(p))render()}});
 render();
+loadConfig();
 })();
 </script>
 </body>
