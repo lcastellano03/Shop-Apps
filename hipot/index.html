@@ -331,7 +331,7 @@ function rSettings(){
      +'<p style="margin:10px 0 0"><button class="btn sm danger" data-rmpart="'+i+'">Remove part</button></p></div>'}).join("")
    +'<button class="btn sm" data-act="addpart">+ Add part</button></div>';
   h+='<div class="card"><h3>Samples</h3><p class="note" style="margin:0 0 10px">Assign a part to each numbered sample (up to '+MAXS+'). Leave blank to skip a sample.</p><div class="grid">'+S.samples.map(function(id,i){return'<div><label class="f">Sample '+(i+1)+'</label><select data-sample="'+i+'"><option value="">— none —</option>'+S.parts.map(function(p){return'<option value="'+p.id+'"'+(p.id===id?" selected":"")+'>'+esc(p.pn||"(no P/N)")+' · '+p.status+'</option>'}).join("")+'</select></div>'}).join("")+'</div></div>';
-  h+='<div class="card"><h3>Data &amp; backup</h3><p class="note" style="margin:0 0 10px">Readings are saved in this browser on this device. Download a backup regularly; import it to move the study to another device.</p><div class="row"><button class="btn" data-act="csv">Download CSV</button><button class="btn" data-act="backup">Backup (JSON)</button><label class="btn" style="cursor:pointer">Restore backup<input type="file" accept=".json,application/json" id="restore" hidden></label><button class="btn danger" data-act="clearread">Delete all readings</button><button class="btn danger" data-act="changepin">Change owner PIN</button></div></div>';
+  h+='<div class="card"><h3>Data &amp; backup</h3><p class="note" style="margin:0 0 10px">Demo buttons fill in made-up values (2 voltages, 3 samples, 1 operator) so you can try the app; they replace the current setup and readings but keep your owner PIN. Readings are saved in this browser on this device. Download a backup regularly; import it to move the study to another device.</p><div class="row"><button class="btn" data-act="csv">Download CSV</button><button class="btn" data-act="backup">Backup (JSON)</button><label class="btn" style="cursor:pointer">Restore backup<input type="file" accept=".json,application/json" id="restore" hidden></label><button class="btn" data-act="demoset">Load demo setup</button><button class="btn" data-act="demodata">Load demo setup + readings</button><button class="btn danger" data-act="clearread">Delete all readings</button><button class="btn danger" data-act="changepin">Change owner PIN</button></div></div>';
   return h}
 
 /* ---------- actions ---------- */
@@ -351,6 +351,23 @@ function addReading(ma,tripped){
   if(t>=n){var np=nextPending();cur=np?{set:np.set,sample:np.sample}:cur;flash.text+=' · sample complete'+(np?', moved to sample '+np.sample+(np.set!==r.set?' at '+setLabel(np.set):''):' – study complete!')}
   if(lim.max==null)flash.text+=' · ⚠ no max limit set for this part'
   render()}
+
+function loadDemo(withReadings){
+  var keep=S.ownerHash,g=uid(),b=uid();
+  S=fresh();S.ownerHash=keep;
+  S.info={testerId:"DEMO-HP-01",fixtureId:"DEMO-FX-02",date:new Date().toISOString().slice(0,10),ramp:"1.0 s ramp / 2.0 s dwell",trials:10,tripMa:"10"};
+  S.operators=["Demo Operator"];S.operator="Demo Operator";
+  S.volts=[1200,1500,"","","",""];
+  S.parts=[{id:g,pn:"ST-DEMO-GOOD",status:"Good",min:"0",max:"5",lim:{}},{id:b,pn:"ST-DEMO-BAD",status:"Bad",min:"0",max:"5",lim:{}}];
+  S.samples[0]=g;S.samples[1]=g;S.samples[2]=b;
+  if(withReadings){
+    var base={1:[1.80,2.30,7.9],2:[2.05,2.55,8.3]},t0=Date.now()-3600000,k=0;
+    [1,2].forEach(function(set){[1,2,3].forEach(function(sm){
+      var n=set===1?10:(sm===1?6:0);
+      for(var t=1;t<=n;t++){var part=partById(S.samples[sm-1]),ma=base[set][sm-1]+Math.sin(t*2.1+sm)*0.06+t*0.004;
+        ma=Math.round(ma*1000)/1000;
+        S.readings.push({id:uid(),set:set,sample:sm,trial:t,ma:ma,op:"Demo Operator",pn:part.pn,status:part.status,v:S.volts[set-1],min:0,max:5,ts:t0+(k++)*20000,tripped:false})}})})}
+  save()}
 document.addEventListener("submit",function(ev){var f=ev.target.id;
   if(f==="entry"){ev.preventDefault();var inp=document.getElementById("ma"),v=num(inp.value.replace(",","."));
     if(v==null||v<0){document.getElementById("entryErr").textContent="Enter the reading as a number, e.g. 1.842";inp.focus();return}
@@ -377,6 +394,7 @@ document.addEventListener("click",function(ev){
     case"addop":S.operators.push("");save();render();break;
     case"addpart":S.parts.push({id:uid(),pn:"",status:"Good",min:"0",max:"",lim:{}});save();render();break;
     case"backup":download("hipot-rr-backup-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(S),"application/json");break;
+    case"demoset":case"demodata":var wr=el.dataset.act==="demodata";if(confirm("Replace the current setup"+(S.readings.length?" and "+S.readings.length+" readings":"")+" with demo values?")){loadDemo(wr);cur={set:null,sample:null};flash=null;render()}break;
     case"clearread":askPin("Owner PIN to delete ALL readings:",function(){if(confirm("Delete all "+S.readings.length+" readings? This cannot be undone."))S.readings=[],save(),render()});break;
     case"changepin":askPin("Current owner PIN:",function(){S.ownerHash="";save();ownerOpen=false;pinMsg="";render()});break}});
 document.addEventListener("change",function(ev){var t=ev.target;
