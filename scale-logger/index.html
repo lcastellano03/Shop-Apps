@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scale Logger</title>
+<style>
+:root{
+  --bg:#FFFFFF; --panel:#ffffff; --head:#E3E7F2; --line:#C5CDE3; --alt:#F2F4FA;
+  --ink:#221E32; --mute:#5A5670; --acc:#291E44; --acc2:#53478A; --accink:#ffffff;
+  --warn:#fff1cf; --warnink:#6e4a00; --bad:#fde1e6; --badink:#8c1d37; --ok:#e0f4e6; --okink:#1b6b3a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Arial,"Helvetica Neue",Helvetica,system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#fff;color:var(--ink);border-bottom:4px solid #221E32}
+header img{height:44px;width:auto;display:block}
+header h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.2px;padding-left:14px;border-left:1px solid var(--line)}
+.pill{padding:2px 12px;border-radius:99px;background:var(--head);color:var(--mute);font-size:12.5px;margin-left:auto}
+.pill.on{background:#d9f5e3;color:#14562f}
+.pill.sim{background:#fff1cf;color:#6e4a00}
+.banner{margin:12px 20px 0;padding:10px 14px;border-radius:8px;background:var(--warn);color:var(--warnink);border:1px solid #ecd28f}
+main{display:grid;gap:14px;padding:14px 20px 28px;grid-template-columns:minmax(260px,320px) minmax(340px,1fr) minmax(300px,420px)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel>h2{margin:0;padding:8px 14px;font-size:13.5px;font-weight:600;background:var(--head);border-bottom:1px solid var(--line)}
+.pad{padding:12px 14px}
+.wide{grid-column:1/-1}
+label{display:block;font-size:12px;color:var(--mute);margin:8px 0 2px}
+select,input[type=text],input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:inherit}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;padding:7px 12px;border-radius:7px;border:1px solid var(--acc);background:#fff;color:var(--acc);cursor:pointer}
+button:hover:not(:disabled){background:var(--alt)}
+button.primary{background:var(--acc);color:var(--accink)}
+button.primary:hover:not(:disabled){background:var(--acc2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc2);outline-offset:1px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--ink)}
+.chk input{width:auto}
+.hint{font-size:12px;color:var(--mute);margin-top:6px}
+#reading{font:600 46px/1.1 ui-monospace,Consolas,"Courier New",monospace;font-variant-numeric:tabular-nums;text-align:center;padding:14px 8px 4px;color:var(--ink)}
+#readingMeta{text-align:center;color:var(--mute);font-size:12.5px;min-height:18px}
+#prompt{margin:12px 14px 0;padding:10px 12px;border-radius:8px;background:var(--alt);border:1px solid var(--line);font-size:14px}
+#prompt b{color:var(--acc)}
+#capBtn{width:calc(100% - 28px);margin:12px 14px 0;padding:14px;font-size:17px}
+#toast{margin:10px 14px 14px;padding:8px 12px;border-radius:8px;min-height:36px;font-size:13px;background:var(--alt);color:var(--mute)}
+#toast.bad{background:var(--bad);color:var(--badink)} #toast.warn{background:var(--warn);color:var(--warnink)} #toast.ok{background:var(--ok);color:var(--okink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.stats div{background:#fff;padding:8px 10px}
+.stats small{display:block;color:var(--mute);font-size:11.5px}
+.stats b{font:600 16px ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+#chart{width:100%;height:210px;display:block}
+.tablewrap{max-height:380px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 9px;border-bottom:1px solid #E3E7F2;text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--head);font-weight:600;font-size:12.5px;z-index:1}
+td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3),td:last-child,th:last-child{text-align:left}
+tbody tr:nth-child(even){background:var(--alt)}
+tr.ex td{color:#8F9BBF;text-decoration:line-through}
+tr.ex td:nth-child(9),tr.ex td:last-child{text-decoration:none}
+td.net{font-weight:600}
+td input[type=text]{min-width:180px;padding:3px 6px}
+td input[type=checkbox]{width:auto}
+pre{margin:0;padding:10px 14px;background:#F7F8FC;font:12.5px/1.4 ui-monospace,Consolas,monospace;max-height:230px;overflow:auto;white-space:pre-wrap}
+details summary{cursor:pointer;padding:8px 14px;font-weight:600;background:var(--head)}
+details .pad ol{margin:6px 0 6px 18px;padding:0}
+.empty{padding:22px;text-align:center;color:var(--mute)}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s}}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="Unusual Machines" width="179" height="44">
+  <h1>Scale Logger</h1>
+  <span id="status" class="pill">Disconnected</span>
+</header>
+<div id="unsupported" class="banner" hidden></div>
+
+<main>
+  <!-- ============ settings ============ -->
+  <section class="panel">
+    <h2>Connection</h2>
+    <div class="pad">
+      <div class="row2">
+        <div><label for="baud">Baud rate</label>
+          <select id="baud"><option>9600</option><option>4800</option><option>2400</option><option>1200</option><option>19200</option><option>38400</option></select></div>
+        <div><label for="mode">Capture mode</label>
+          <select id="mode">
+            <option value="print_key">print_key</option>
+            <option value="command">command</option>
+            <option value="stream">stream</option>
+          </select></div>
+      </div>
+      <div id="cmdBox" hidden>
+        <div class="row2">
+          <div><label for="printCmd">Print command</label><input type="text" id="printCmd" value="P\r\n"></div>
+          <div><label for="tareCmd">Tare command</label><input type="text" id="tareCmd" value="T\r\n"></div>
+        </div>
+      </div>
+      <div id="streamBox" hidden>
+        <div class="row2">
+          <div><label for="stN">Stable after N reads</label><input type="number" id="stN" value="5" min="2" max="20"></div>
+          <div><label for="stTol">Tolerance (g)</label><input type="number" id="stTol" value="0.0002" step="0.0001" min="0"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div><label for="weigh">Weigh method</label>
+          <select id="weigh"><option value="ba">Before / after</option><option value="tare">Tare, then net</option></select></div>
+        <div><label for="unit">Unit (display + export)</label>
+          <select id="unit"><option value="mg">mg</option><option value="g">g</option></select></div>
+      </div>
+      <div class="row2">
+        <div><label for="prefix">Part ID prefix</label><input type="text" id="prefix" value="P" maxlength="8"></div>
+        <div><label for="tol50">Outlier warn (% off mean)</label><input type="number" id="tol50" value="50" min="5" max="500"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="sim"> Simulate (no hardware)</label>
+      <div class="btns">
+        <button class="primary" id="connBtn">Connect</button>
+        <button id="discBtn">Discover protocol</button>
+      </div>
+      <div class="hint">Serial settings: 8 data bits, no parity, 1 stop bit. Set the balance to grams and leave it there.</div>
+    </div>
+  </section>
+
+  <!-- ============ capture ============ -->
+  <section class="panel">
+    <h2>Capture</h2>
+    <div id="reading">--</div>
+    <div id="readingMeta">no reading yet</div>
+    <div id="prompt"></div>
+    <button class="primary" id="capBtn">Capture</button>
+    <div class="btns" style="margin:10px 14px 0">
+      <label class="chk" style="margin:0"><input type="checkbox" id="flagNext"> Flag next part as bad (x)</label>
+      <button id="tareBtn">Tare (t)</button>
+      <button id="redoBtn">Redo before (Esc)</button>
+      <button id="undoBtn">Undo last (u)</button>
+    </div>
+    <div id="toast">Ready.</div>
+  </section>
+
+  <!-- ============ stats ============ -->
+  <section class="panel">
+    <h2>Run statistics (excluded rows ignored)</h2>
+    <div class="stats" id="stats"></div>
+    <canvas id="chart"></canvas>
+  </section>
+
+  <!-- ============ log ============ -->
+  <section class="panel wide">
+    <h2>Weight log</h2>
+    <div class="pad" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line)">
+      <button class="primary" id="csvBtn">Download CSV</button>
+      <button id="copyBtn">Copy for Excel (B..F)</button>
+      <button id="newBtn">New run</button>
+      <span class="hint" id="saveHint" style="margin:0 0 0 auto"></span>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Timestamp</th><th>Part ID</th><th id="thB">Before</th><th id="thA">After</th><th id="thD">Direct net</th><th id="thN">Net glue</th><th>Stable</th><th>Exclude</th><th>Note</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table><div id="empty" class="empty">No parts logged yet.</div></div>
+  </section>
+
+  <section class="panel wide">
+    <details>
+      <summary>Raw serial monitor and protocol discovery</summary>
+      <pre id="mon">(nothing received yet)</pre>
+      <pre id="disc" style="border-top:1px solid var(--line)" hidden></pre>
+      <div class="pad"><button id="discStop" hidden>Stop discovery</button></div>
+    </details>
+  </section>
+
+  <section class="panel wide">
+    <details>
+      <summary>How to use</summary>
+      <div class="pad">
+        <ol>
+          <li>Use Chrome or Edge (desktop) on the PC the balance is plugged into. This page works over HTTPS (GitHub Pages), from a local file, or from <b>http://localhost</b>. Close any other program using the COM port first.</li>
+          <li>First time: click <b>Discover protocol</b>. Put the 200 g weight on the pan, then press PRINT when asked. It finds baud rate and format.</li>
+          <li>Click <b>Connect</b> and pick the COM port.</li>
+          <li><b>print_key</b>: weigh the bare part, wait for the stability mark, press PRINT on the balance. The reading logs itself. Repeat after gluing.</li>
+          <li><b>command / stream</b>: press <b>Capture</b> (or Enter) instead of PRINT.</li>
+          <li>Bad shot: tick the flag before the part, or tick Exclude in the log. Rows are never deleted, only excluded.</li>
+          <li><b>Copy for Excel</b> puts timestamp, part ID, before, after and direct net on the clipboard. Paste-special values into Weight Log cell B6.</li>
+        </ol>
+        <div class="hint">Run data is kept in this browser until you click New run. Download the CSV before closing.</div>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const S = { port:null, reader:null, loop:null, open:false, waiters:[], rows:[], pending:null,
+            busy:false, cancel:null, lastAuto:0, monitor:[], flushT:null, simHold:null, discStop:false, lastG:null };
+
+/* ------------------------------------------------------------ helpers */
+const K  = () => $("unit").value === "mg" ? 1000 : 1;
+const fmt = g => (g == null || isNaN(g)) ? "" : (g * K()).toFixed(K() === 1000 ? 1 : 4);
+const uLab = () => $("unit").value;
+const pad2 = n => String(n).padStart(2, "0");
+const stamp = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const unesc = s => s.replace(/\\r/g,"\r").replace(/\\n/g,"\n").replace(/\\t/g,"\t");
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+let toastT = null;
+function toast(msg, kind = "") {
+  const t = $("toast"); t.textContent = msg; t.className = kind;
+  clearTimeout(toastT);
+  if (kind === "ok") toastT = setTimeout(() => { t.className = ""; }, 4000);
+}
+
+/* ------------------------------------------------------------ parser */
+// Returns {g, stable, raw} | {err} | null.  Handles: "S S 0.1234 g", "ST,GS,+ 0.1487 g",
+// "US,GS,+ 0.1400 g", "+ 0.1502 g", "0.0991 g", "123.4567 mg", "0.000123 kg".
+function parseLine(line) {
+  const t = line.replace(/[\x00-\x08\x0e-\x1f]/g, "").trim();
+  if (!t) return null;
+  if (/\d{1,4}[-\/:]\d{1,2}[-\/:]\d/.test(t)) return null;       // date / time line
+  const m = t.match(/([+-]?)\s*(\d+(?:\.\d+)?|\.\d+)\s*(mg|kg|ct|oz|g)?(?![a-z])/i);
+  if (!m) return null;
+  let v = parseFloat(m[2]); if (m[1] === "-") v = -v;
+  const unit = (m[3] || "g").toLowerCase();
+  const head = t.slice(0, m.index);
+  let stable = null;
+  if (/\bUS\b|\bD\b|\?/.test(head + t.slice(m.index + m[0].length))) stable = false;
+  else if (/\bST\b|\bS\s?S\b|^S\b/.test(head)) stable = true;
+  if (unit === "ct" || unit === "oz") return { err: `unit "${unit}" — set the balance to grams`, raw: t };
+  const g = unit === "mg" ? v / 1000 : unit === "kg" ? v * 1000 : v;
+  return { g, stable, raw: t };
+}
+
+/* ------------------------------------------------------------ serial plumbing */
+function onLine(line) {
+  S.monitor.push(line); if (S.monitor.length > 60) S.monitor.shift();
+  $("mon").textContent = S.monitor.join("\n") || "(nothing received yet)";
+  const p = parseLine(line);
+  if (!p) return;
+  if (p.err) { toast(p.err, "bad"); return; }
+  S.lastG = p.g;
+  $("reading").textContent = fmt(p.g);
+  $("readingMeta").textContent = `${uLab()}  ·  ${p.stable === true ? "stable" : p.stable === false ? "NOT stable" : "no stability flag"}  ·  ${p.raw}`;
+  for (const w of [...S.waiters]) w(p);
+  // hands-free: in print_key mode a line that arrives while idle IS the captured reading
+  if ($("mode").value === "print_key" && !S.busy && !S.sim && S.open && !S.waiters.length) {
+    const now = Date.now();
+    if (now - S.lastAuto < 1200) return;      // debounce double prints
+    S.lastAuto = now;
+    step({ g: p.g, raw: p.raw, stable: p.stable !== false });
+  }
+}
+
+function feed(text) {
+  S.buf = (S.buf || "") + text;
+  const parts = S.buf.split(/\r\n|\r|\n/);
+  S.buf = parts.pop();
+  parts.forEach(onLine);
+  clearTimeout(S.flushT);
+  if (S.buf) S.flushT = setTimeout(() => { const b = S.buf; S.buf = ""; if (b) onLine(b); }, 250); // no-terminator balances
+}
+
+async function connect() {
+  if (!("serial" in navigator)) { toast("Web Serial is not available in this browser.", "bad"); return; }
+  try {
+    if (!S.port) S.port = await navigator.serial.requestPort();
+    await S.port.open({ baudRate: +$("baud").value, dataBits: 8, stopBits: 1, parity: "none", bufferSize: 4096 });
+  } catch (e) { if (e.name !== "NotFoundError") toast("Cannot open port: " + e.message, "bad"); return; }
+  S.open = true; S.buf = "";
+  S.reader = S.port.readable.getReader();
+  const dec = new TextDecoder("latin1");
+  S.loop = (async () => {
+    try { for (;;) { const { value, done } = await S.reader.read(); if (done) break; if (value) feed(dec.decode(value, { stream: true })); } }
+    catch (e) { toast("Serial read error: " + e.message, "bad"); }
+    finally { try { S.reader.releaseLock(); } catch (_) {} }
+  })();
+  toast("Connected.", "ok"); render();
+}
+
+async function disconnect() {
+  try { if (S.reader) await S.reader.cancel(); } catch (_) {}
+  try { await S.loop; } catch (_) {}
+  try { if (S.port) await S.port.close(); } catch (_) {}
+  S.open = false; S.reader = null; S.loop = null; render();
+}
+
+async function sendText(str) {
+  if (!S.open) throw new Error("Not connected");
+  const w = S.port.writable.getWriter();
+  try { await w.write(new TextEncoder().encode(str)); } finally { w.releaseLock(); }
+}
+
+/* ------------------------------------------------------------ acquire one reading */
+function acquire(label) {
+  if (S.sim) return simRead(label);
+  if (!S.open) return Promise.reject(new Error("Not connected"));
+  const mode = $("mode").value;
+  const timeout = mode === "print_key" ? 30000 : 8000;
+  return new Promise((resolve, reject) => {
+    const win = [];
+    let retry = null, tmo = null;
+    const done = (fn, v) => { clearTimeout(tmo); clearInterval(retry); S.waiters = S.waiters.filter(x => x !== w); S.cancel = null; fn(v); };
+    const w = p => {
+      if (mode !== "stream") return done(resolve, { g: p.g, raw: p.raw, stable: p.stable !== false });
+      if (p.stable === true) return done(resolve, { g: p.g, raw: p.raw, stable: true });
+      win.push(p.g); if (win.length > +$("stN").value) win.shift();
+      if (win.length >= +$("stN").value && Math.max(...win) - Math.min(...win) <= +$("stTol").value)
+        done(resolve, { g: win[win.length - 1], raw: p.raw, stable: true });
+    };
+    S.waiters.push(w);
+    S.cancel = () => done(reject, new Error("Cancelled"));
+    tmo = setTimeout(() => done(reject, new Error(mode === "print_key" ? "No PRINT received in 30 s." : "No reading received. Check the print command / mode.")), timeout);
+    if (mode === "command") { const cmd = unesc($("printCmd").value); sendText(cmd).catch(()=>{}); retry = setInterval(() => sendText(cmd).catch(()=>{}), 2000); }
+  });
+}
+
+async function simRead(label) {
+  await sleep(350);
+  let g;
+  if (label === "before") g = 12.4 + gauss() * 0.0003;
+  else if (label === "after") g = (S.pending ? S.pending.g : 12.4) + 0.0218 + gauss() * 0.0012;
+  else g = 0.0218 + gauss() * 0.0012;
+  g = Math.round(g * 1e4) / 1e4;
+  const raw = `ST,GS,+${g.toFixed(4).padStart(10)} g`;
+  onLine(raw);
+  return { g, raw, stable: true };
+}
+
+/* ------------------------------------------------------------ capture logic */
+function nextId() { return `${$("prefix").value || "P"}${String(S.rows.length + 1).padStart(3, "0")}`; }
+
+function step(r) {
+  const ba = $("weigh").value === "ba";
+  if (ba && !S.pending) {
+    S.pending = { g: r.g, raw: r.raw, stable: r.stable, flag: $("flagNext").checked };
+    $("flagNext").checked = false;
+    toast(`${nextId()} before = ${fmt(r.g)} ${uLab()}. Glue the part, put it back, capture again.`, "ok");
+  } else if (ba) {
+    const p = S.pending; S.pending = null;
+    commit({ before: p.g, after: r.g, direct: null, net: r.g - p.g, stable: p.stable && r.stable, flag: p.flag || $("flagNext").checked });
+  } else {
+    commit({ before: null, after: null, direct: r.g, net: r.g, stable: r.stable, flag: $("flagNext").checked });
+  }
+  $("flagNext").checked = false;
+  render();
+}
+
+function commit(o) {
+  const notes = []; let ex = !!o.flag;
+  if (o.flag) notes.push("flagged bad at capture");
+  if (!o.stable) { ex = true; notes.push("reading not stable"); }
+  if (o.net <= 0) { ex = true; notes.push("non-positive net, check weighing order"); toast(`Net is ${fmt(o.net)} ${uLab()}. Check the weighing order. Row excluded.`, "bad"); }
+  const used = S.rows.filter(r => !r.ex).map(r => r.net);
+  if (!ex && used.length >= 3) {
+    const mu = used.reduce((a, b) => a + b, 0) / used.length;
+    if (mu && Math.abs(o.net - mu) > (+$("tol50").value / 100) * Math.abs(mu)) {
+      toast(`${fmt(o.net)} ${uLab()} is more than ${$("tol50").value}% off the running mean (${fmt(mu)}). Check it, tick Exclude if it is a bad shot.`, "warn");
+    } else toast(`${nextId()} net = ${fmt(o.net)} ${uLab()}`, "ok");
+  } else if (!ex) toast(`${nextId()} net = ${fmt(o.net)} ${uLab()}`, "ok");
+  S.rows.push({ ts: stamp(), id: nextId(), before: o.before, after: o.after, direct: o.direct, net: o.net, stable: o.stable, ex, note: notes.join("; ") });
+  save();
+}
+
+async function doCapture() {
+  if (S.busy) { if (S.cancel) S.cancel(); return; }
+  S.busy = true; render();
+  try { const r = await acquire(S.pending ? "after" : ($("weigh").value === "ba" ? "before" : "net")); step(r); }
+  catch (e) { if (e.message !== "Cancelled") toast(e.message, "bad"); }
+  finally { S.busy = false; S.cancel = null; render(); }
+}
+
+/* ------------------------------------------------------------ persistence */
+function save() {
+  try { localStorage.setItem("scaleLogger.run", JSON.stringify({ rows: S.rows, pending: S.pending,
+        s: { baud:$("baud").value, mode:$("mode").value, weigh:$("weigh").value, unit:$("unit").value, prefix:$("prefix").value,
+             printCmd:$("printCmd").value, tareCmd:$("tareCmd").value, stN:$("stN").value, stTol:$("stTol").value, tol50:$("tol50").value } }));
+    $("saveHint").textContent = "Auto-saved in this browser at " + stamp().slice(11);
+  } catch (_) { $("saveHint").textContent = "Auto-save unavailable. Download the CSV regularly."; }
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem("scaleLogger.run") || "null"); if (!d) return;
+    S.rows = d.rows || []; S.pending = d.pending || null;
+    for (const [k, v] of Object.entries(d.s || {})) if ($(k) && v != null) $(k).value = v;
+  } catch (_) {}
+}
+
+/* ------------------------------------------------------------ rendering */
+function stats() {
+  const v = S.rows.filter(r => !r.ex).map(r => r.net), n = v.length;
+  const mean = n ? v.reduce((a, b) => a + b, 0) / n : NaN;
+  const sd = n > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1)) : NaN;
+  return { n, mean, sd, cv: sd / mean, min: n ? Math.min(...v) : NaN, max: n ? Math.max(...v) : NaN, v };
+}
+
+function render() {
+  const st = $("status"), connected = S.open || S.sim;
+  st.textContent = S.sim ? "Simulating" : S.open ? "Connected" : "Disconnected";
+  st.className = "pill" + (S.sim ? " sim" : S.open ? " on" : "");
+  $("connBtn").textContent = S.open ? "Disconnect" : "Connect";
+  $("connBtn").disabled = S.sim;
+  $("discBtn").disabled = S.open || S.sim || S.discRun;
+  const mode = $("mode").value, ba = $("weigh").value === "ba";
+  $("cmdBox").hidden = mode !== "command";
+  $("streamBox").hidden = mode !== "stream";
+
+  const cap = $("capBtn");
+  const hands = mode === "print_key" && !S.sim;
+  cap.disabled = !connected || (hands && !S.busy);
+  cap.textContent = S.busy ? "Waiting… (click to cancel)"
+    : hands ? "Press PRINT on the balance"
+    : S.sim && mode === "print_key" ? (S.pending ? "Simulate PRINT (after)" : ba ? "Simulate PRINT (before)" : "Simulate PRINT")
+    : ba ? (S.pending ? "Capture AFTER (Enter)" : "Capture BEFORE (Enter)") : "Capture net (Enter)";
+  $("redoBtn").disabled = !S.pending; $("redoBtn").hidden = !ba;
+  $("undoBtn").disabled = !S.rows.length;
+  $("tareBtn").disabled = !connected;
+
+  const id = nextId();
+  $("prompt").innerHTML = !connected ? "Click <b>Connect</b>, or tick <b>Simulate</b> to rehearse."
+    : ba ? (S.pending ? `<b>${id}</b> · before = ${fmt(S.pending.g)} ${uLab()}. Glue the part, put it back, door closed, wait for the stability mark.`
+                      : `<b>${id}</b> · put the <b>bare</b> part on the pan, door closed, wait for the stability mark.`)
+         : `<b>${id}</b> · bare part on the pan, tare with O/T, glue it, return it, door closed, wait for the stability mark.`;
+
+  const u = uLab();
+  $("thB").textContent = `Before (${u})`; $("thA").textContent = `After (${u})`;
+  $("thD").textContent = `Direct net (${u})`; $("thN").textContent = `Net glue (${u})`;
+  $("rows").innerHTML = S.rows.map((r, i) => `<tr class="${r.ex ? "ex" : ""}">
+    <td>${i + 1}</td><td>${esc(r.ts)}</td><td>${esc(r.id)}</td><td>${fmt(r.before)}</td><td>${fmt(r.after)}</td><td>${fmt(r.direct)}</td>
+    <td class="net">${fmt(r.net)}</td><td>${r.stable ? "yes" : "NO"}</td>
+    <td><input type="checkbox" data-ex="${i}" ${r.ex ? "checked" : ""} aria-label="Exclude ${esc(r.id)}"></td>
+    <td><input type="text" data-note="${i}" value="${esc(r.note)}" aria-label="Note for ${esc(r.id)}"></td></tr>`).join("");
+  $("empty").hidden = S.rows.length > 0;
+
+  const s = stats(), f = x => isFinite(x) ? fmt(x) : "–";
+  $("stats").innerHTML = [["n", s.n], [`mean (${u})`, f(s.mean)], [`SD (${u})`, f(s.sd)],
+    ["CV", isFinite(s.cv) ? (s.cv * 100).toFixed(2) + " %" : "–"], [`min (${u})`, f(s.min)], [`max (${u})`, f(s.max)]]
+    .map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join("");
+  drawChart();
+}
+
+function drawChart() {
+  const c = $("chart"), dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  c.width = w * dpr; c.height = h * dpr;
+  const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h);
+  x.font = "11px system-ui,sans-serif";
+  if (!S.rows.length) { x.fillStyle = "#6b6280"; x.textAlign = "center"; x.fillText("Individuals chart appears here", w / 2, h / 2); return; }
+  const k = K(), pts = S.rows.map(r => ({ y: r.net * k, ex: r.ex })), used = pts.filter(p => !p.ex).map(p => p.y);
+  let mean = null, ucl = null, lcl = null;
+  if (used.length >= 2) {
+    mean = used.reduce((a, b) => a + b, 0) / used.length;
+    if (used.length >= 5) { let mr = 0; for (let i = 1; i < used.length; i++) mr += Math.abs(used[i] - used[i - 1]); mr /= used.length - 1; ucl = mean + 2.66 * mr; lcl = mean - 2.66 * mr; }
+  }
+  const all = pts.map(p => p.y).concat([ucl, lcl].filter(v => v != null));
+  let lo = Math.min(...all), hi = Math.max(...all); if (hi === lo) { hi += 1; lo -= 1; }
+  const padv = (hi - lo) * 0.08; lo -= padv; hi += padv;
+  const L = 52, R = 10, T = 10, B = 20, X = i => L + (pts.length < 2 ? (w - L - R) / 2 : i * (w - L - R) / (pts.length - 1)), Y = v => T + (hi - v) / (hi - lo) * (h - T - B);
+  x.strokeStyle = "#e6e1ee"; x.fillStyle = "#6b6280"; x.textAlign = "right";
+  for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4, yy = Y(v); x.beginPath(); x.moveTo(L, yy); x.lineTo(w - R, yy); x.stroke(); x.fillText(v.toFixed(k === 1000 ? 1 : 4), L - 5, yy + 4); }
+  const hl = (v, col, dash) => { if (v == null) return; x.strokeStyle = col; x.setLineDash(dash); x.beginPath(); x.moveTo(L, Y(v)); x.lineTo(w - R, Y(v)); x.stroke(); x.setLineDash([]); };
+  hl(mean, "#7a6b9a", []); hl(ucl, "#b5456a", [5, 4]); hl(lcl, "#b5456a", [5, 4]);
+  x.strokeStyle = "#2c1c47"; x.lineWidth = 1.4; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(X(i), Y(p.y)) : x.moveTo(X(i), Y(p.y))); x.stroke(); x.lineWidth = 1;
+  pts.forEach((p, i) => { x.beginPath(); x.arc(X(i), Y(p.y), 3.2, 0, 7); if (p.ex) { x.fillStyle = "#fff"; x.fill(); x.strokeStyle = "#9a8fb3"; x.stroke(); } else { x.fillStyle = (ucl != null && (p.y > ucl || p.y < lcl)) ? "#b5456a" : "#2c1c47"; x.fill(); } });
+  x.fillStyle = "#6b6280"; x.textAlign = "left"; x.fillText(`${uLab()} per part` + (ucl != null ? "  ·  dashed = limits from moving range" : ""), L, h - 5);
+}
+
+/* ------------------------------------------------------------ export */
+function csvText(withHeader) {
+  const u = uLab(), q = s => /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  const lines = withHeader ? [["timestamp","part_id",`part_before_${u}`,`part_after_${u}`,`direct_net_${u}`,`net_${u}`,"stable","exclude","note"].join(",")] : [];
+  S.rows.forEach(r => lines.push([r.ts, r.id, fmt(r.before), fmt(r.after), fmt(r.direct), fmt(r.net), r.stable ? "Y" : "N", r.ex ? "Y" : "", q(r.note)].join(",")));
+  return lines.join("\r\n");
+}
+function download() {
+  if (!S.rows.length) return toast("Nothing to export yet.", "warn");
+  const d = new Date(), name = `run_${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}.csv`;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csvText(true)], { type: "text/csv" })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("Saved " + name, "ok");
+}
+async function copyExcel() {
+  if (!S.rows.length) return toast("Nothing to copy yet.", "warn");
+  const tsv = S.rows.map(r => [r.ts, r.id, fmt(r.before), fmt(r.after), fmt(r.direct)].join("\t")).join("\n");
+  try { await navigator.clipboard.writeText(tsv); }
+  catch (_) { const t = document.createElement("textarea"); t.value = tsv; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+  toast(`Copied ${S.rows.length} rows (units: ${uLab()}). Paste-special values into Weight Log B6. Excluded rows still need Y in column L.`, "ok");
+}
+
+/* ------------------------------------------------------------ discovery */
+function timedReader(reader) {
+  let pending = null;
+  return async ms => {
+    const chunks = [], end = Date.now() + ms;
+    while (Date.now() < end) {
+      pending = pending || reader.read();
+      const r = await Promise.race([pending, sleep(Math.max(1, end - Date.now())).then(() => "t")]);
+      if (r === "t") break;
+      pending = null; if (r.done) break; if (r.value) chunks.push(r.value);
+    }
+    const n = chunks.reduce((a, c) => a + c.length, 0), out = new Uint8Array(n); let o = 0;
+    chunks.forEach(c => { out.set(c, o); o += c.length; }); return out;
+  };
+}
+async function discover() {
+  if (!("serial" in navigator)) return toast("Web Serial is not available in this browser.", "bad");
+  const out = $("disc"), log = s => { out.textContent += s + "\n"; out.scrollTop = out.scrollHeight; };
+  try { if (!S.port) S.port = await navigator.serial.requestPort(); } catch (_) { return; }
+  S.discRun = true; S.discStop = false; render();
+  out.hidden = false; out.textContent = ""; $("discStop").hidden = false; document.querySelector("details").open = true;
+  log("PROTOCOL DISCOVERY\nPut a steady load on the pan (200 g weight), close the door, finger on PRINT.\n");
+  const results = [], cmds = ["P\r\n", "SI\r\n", "Q\r\n", "\x1bP\r\n", "W\r\n"];
+  for (const baud of [9600, 4800, 2400, 1200, 19200, 38400]) {
+    if (S.discStop) break;
+    log(`--- ${baud} baud, 8N1`);
+    try { await S.port.open({ baudRate: baud, dataBits: 8, stopBits: 1, parity: "none" }); } catch (e) { log("cannot open port: " + e.message); break; }
+    const reader = S.port.readable.getReader(), rd = timedReader(reader);
+    let bytes = new Uint8Array(0), answered = false;
+    for (let s = 6; s > 0 && !bytes.length && !S.discStop; s -= 2) { toast(`${baud} baud: press PRINT now (${s} s)`, "warn"); bytes = await rd(2000); }
+    if (!bytes.length && !S.discStop) {
+      for (const c of cmds) {
+        const w = S.port.writable.getWriter(); await w.write(new TextEncoder().encode(c)); w.releaseLock();
+        bytes = await rd(700);
+        if (bytes.length) { answered = true; log(`    answers command ${JSON.stringify(c)}`); break; }
+      }
+    }
+    try { await reader.cancel(); } catch (_) {} try { reader.releaseLock(); } catch (_) {} try { await S.port.close(); } catch (_) {}
+    if (!bytes.length) { log("    silence"); continue; }
+    const text = new TextDecoder("latin1").decode(bytes);
+    const printable = [...text].filter(ch => (ch >= " " && ch < "\x7f") || ch === "\r" || ch === "\n").length / Math.max(1, text.length);
+    const parsed = text.split(/\r\n|\r|\n/).map(parseLine).filter(p => p && !p.err);
+    log(`    raw: ${JSON.stringify(text.slice(0, 120))}\n    printable: ${(printable * 100).toFixed(0)}%   parsed lines: ${parsed.length}`);
+    parsed.slice(0, 3).forEach(p => log(`    parsed -> ${p.g} g  stability=${p.stable}   from ${JSON.stringify(p.raw)}`));
+    results.push({ baud, printable, n: parsed.length, answered, sample: parsed[0] ? parsed[0].raw : text.trim().slice(0, 60) });
+  }
+  const good = results.filter(r => r.n > 0 && r.printable > 0.9).sort((a, b) => b.n - a.n || b.printable - a.printable);
+  log("\n========================================");
+  if (!good.length) log("No baud rate produced readable weight lines.\nCheck for a null-modem (crossed) cable, the USB-serial driver, and that PRINT is enabled on the balance.\nFallback: type weights into the Weight Log by hand. The study is just as valid.");
+  else {
+    const b = good[0];
+    log(`RESULT\n  Baud rate        : ${b.baud}\n  Data/parity/stop : 8 / N / 1\n  Accepts commands : ${b.answered ? "YES" : "NO (transmit-only)"}\n  Capture mode     : ${b.answered ? "command" : "print_key"}\n  Sample line      : ${JSON.stringify(b.sample)}`);
+    $("baud").value = String(b.baud); $("mode").value = b.answered ? "command" : "print_key";
+    toast(`Found ${b.baud} baud, ${b.answered ? "command" : "print_key"} mode. Settings applied. Click Connect.`, "ok"); save();
+  }
+  S.discRun = false; $("discStop").hidden = true; render();
+}
+
+/* ------------------------------------------------------------ events */
+$("connBtn").onclick = () => S.open ? disconnect() : connect();
+$("discBtn").onclick = discover;
+$("discStop").onclick = () => { S.discStop = true; };
+$("capBtn").onclick = doCapture;
+$("sim").onchange = e => { S.sim = e.target.checked; if (S.sim && S.open) disconnect(); render(); };
+$("tareBtn").onclick = async () => {
+  if ($("mode").value === "command" && S.open) { try { await sendText(unesc($("tareCmd").value)); toast("Tare sent.", "ok"); } catch (e) { toast(e.message, "bad"); } }
+  else toast(S.sim ? "Simulated tare." : "Press O/T on the balance.", "");
+};
+$("redoBtn").onclick = () => { if (S.busy && S.cancel) S.cancel(); S.pending = null; save(); render(); toast("Before reading discarded.", ""); };
+$("undoBtn").onclick = () => { const r = S.rows.pop(); if (r) toast(`Removed ${r.id}.`, "warn"); save(); render(); };
+$("csvBtn").onclick = download;
+$("copyBtn").onclick = copyExcel;
+$("newBtn").onclick = () => {
+  if (S.rows.length && !confirm(`Clear ${S.rows.length} logged parts? Download the CSV first if you need them.`)) return;
+  S.rows = []; S.pending = null; save(); render(); toast("New run started.", "ok");
+};
+["mode", "weigh", "unit", "prefix", "printCmd", "tareCmd", "stN", "stTol", "tol50", "baud"].forEach(id => $(id).addEventListener("change", () => { save(); render(); }));
+$("rows").addEventListener("change", e => {
+  const t = e.target;
+  if (t.dataset.ex != null) { S.rows[+t.dataset.ex].ex = t.checked; save(); render(); }
+  else if (t.dataset.note != null) { S.rows[+t.dataset.note].note = t.value; save(); }
+});
+document.addEventListener("keydown", e => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.key !== "Escape") return;
+  if (e.key === "Enter" && !$("capBtn").disabled) { e.preventDefault(); doCapture(); }
+  else if (e.key === "x") { $("flagNext").checked = !$("flagNext").checked; }
+  else if (e.key === "t") $("tareBtn").click();
+  else if (e.key === "u") $("undoBtn").click();
+  else if (e.key === "Escape") { if (S.busy && S.cancel) S.cancel(); else if (S.pending) $("redoBtn").click(); }
+});
+window.addEventListener("resize", drawChart);
+if ("serial" in navigator) navigator.serial.addEventListener("disconnect", () => { S.open = false; S.reader = null; toast("Serial device unplugged.", "bad"); render(); });
+
+/* ------------------------------------------------------------ start */
+(function init() {
+  const ub = $("unsupported");
+  if (!("serial" in navigator)) {
+    ub.hidden = false;
+    ub.textContent = window.isSecureContext
+      ? "This browser has no Web Serial support. Use Chrome or Edge on desktop. You can still rehearse with Simulate."
+      : "Web Serial needs a secure context. Open this page via https:// (or http://localhost). A plain http:// page is blocked. You can still rehearse with Simulate.";
+  }
+  load(); render();
+  if (S.rows.length) toast(`Resumed ${S.rows.length} logged parts from this browser. Click New run to start clean.`, "warn");
+})();
+</script>
+</body>
+</html>
