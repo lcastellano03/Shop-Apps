@@ -28,6 +28,26 @@ a.card:hover{background:var(--purple);color:var(--white)}
 a.card:hover small{color:var(--white)}
 .lock{display:block;margin:16px auto 0;background:var(--btn);border:0;border-radius:4px;color:var(--white);cursor:pointer;font-size:14px;font-weight:700;padding:10px 28px;font-family:inherit}
 .lock:hover{background:var(--purple)}
+
+.ov{position:fixed;inset:0;z-index:50;background:rgba(34,30,50,.65);display:flex;align-items:center;justify-content:center;padding:16px}
+.dlg{background:var(--white);border-radius:8px;width:100%;max-width:1040px;height:min(92vh,980px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.dh{flex:none;display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #e3e0ec}
+.dh h2{margin:0;font-size:18px;color:var(--navy);flex:1;min-width:0}
+.dh a{color:var(--purple);font-weight:700;font-size:14px;white-space:nowrap}
+.dh button{flex:none;width:36px;height:36px;border:0;border-radius:4px;background:var(--lav);color:var(--navy);font-size:22px;line-height:1;cursor:pointer}
+.dh button:hover{background:var(--purple);color:var(--white)}
+.db{flex:1;min-height:0;background:#eef0f8}
+.db iframe{width:100%;height:100%;border:0;display:block;background:#fff}
+.df{flex:none;display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e3e0ec}
+.df .note{margin:0 auto 0 0;text-align:left;font-size:14px;color:var(--purple)}
+.df button{font-family:inherit;font-size:16px;font-weight:700;padding:12px 22px;border-radius:4px;cursor:pointer;border:2px solid var(--btn)}
+.df .go2{background:var(--btn);color:var(--white)}
+.df .go2:hover{background:var(--purple);border-color:var(--purple)}
+.df .sec{background:var(--white);color:var(--btn)}
+.df .sec:hover{background:var(--lav)}
+.ov button:focus-visible,.ov a:focus-visible{outline:3px solid var(--purple);outline-offset:2px}
+body.noscroll{overflow:hidden}
+@media (max-width:560px){.ov{padding:0}.dlg{height:100%;border-radius:0;max-width:none}.df{flex-wrap:wrap}.df .note{flex:1 1 100%}.df button{flex:1}}
 [hidden]{display:none!important}
 </style></head><body>
 <div class="top"><span class="logo"><img src="logo.png" alt="Unusual Machines"></span></div>
@@ -42,7 +62,7 @@ a.card:hover small{color:var(--white)}
 <section id="apps" hidden>
 <h1>Choose an app</h1><p>Tap an app to open it.</p>
 <a class="card" href="https://lcastellano03.github.io/Scale-Logger/"><div>Scale Logger<small>Log scale readings</small></div><span>&rsaquo;</span></a>
-<a class="card" href="https://lcastellano03.github.io/Servo-Press-QC/"><div>Servo Press QC<small>Shaft, bearing &amp; flux ring press checks</small></div><span>&rsaquo;</span></a>
+<a class="card" id="servo" href="https://lcastellano03.github.io/Servo-Press-QC/"><div>Servo Press QC<small>Shaft, bearing &amp; flux ring press checks</small></div><span>&rsaquo;</span></a>
 <a class="card" href="https://lcastellano03.github.io/Glue-Program/"><div>Glue Program Calculator<small>Glue program calculator</small></div><span>&rsaquo;</span></a>
 <a class="card" href="hipot/"><div>Hipot Leakage R&amp;R<small>Stator hipot repeatability study</small></div><span>&rsaquo;</span></a>
 <button class="lock" id="lock" type="button">Lock</button>
@@ -61,4 +81,27 @@ else{err.textContent="Incorrect passcode";pw.value="";pw.focus()}})});
 document.getElementById("lock").addEventListener("click",function(){try{sessionStorage.removeItem(KEY);sessionStorage.removeItem("glue-pw")}catch(e){}show(false)});
 show(stored());
 })();
-</script></body></html>
+</script><div class="ov" id="gov" hidden>
+<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="gt">
+<div class="dh"><h2 id="gt">Servo Press QC Guide</h2><a id="gfull" href="https://lcastellano03.github.io/Servo-Press-QC/servo-press-qc-guide.html" target="_blank" rel="noopener">Open full page</a><button type="button" id="gx" aria-label="Close guide">&times;</button></div>
+<div class="db"><iframe id="gframe" title="Servo Press QC one-page guide"></iframe></div>
+<div class="df"><p class="note">Read the guide, then continue to the press QC reports.</p><button type="button" class="sec" id="gcancel">Close</button><button type="button" class="go2" id="gcont">Continue to Servo Press QC &rsaquo;</button></div>
+</div></div>
+<script>
+(function(){
+var link=document.getElementById("servo"),ov=document.getElementById("gov"),fr=document.getElementById("gframe"),cont=document.getElementById("gcont"),last=null;
+function open(){last=document.activeElement;if(!fr.getAttribute("src"))fr.src=document.getElementById("gfull").href+"?embed=1";ov.hidden=false;document.body.classList.add("noscroll");cont.focus()}
+function close(){ov.hidden=true;document.body.classList.remove("noscroll");if(last)last.focus()}
+link.addEventListener("click",function(ev){if(ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.button)return;ev.preventDefault();open()});
+cont.addEventListener("click",function(){window.location.href=link.href});
+document.getElementById("gx").addEventListener("click",close);
+document.getElementById("gcancel").addEventListener("click",close);
+ov.addEventListener("mousedown",function(ev){if(ev.target===ov)close()});
+document.addEventListener("keydown",function(ev){
+if(ov.hidden)return;
+if(ev.key==="Escape"){close();return}
+if(ev.key==="Tab"){var f=ov.querySelectorAll("button,a[href]"),a=f[0],b=f[f.length-1];
+if(ev.shiftKey&&document.activeElement===a){ev.preventDefault();b.focus()}else if(!ev.shiftKey&&document.activeElement===b){ev.preventDefault();a.focus()}}});
+})();
+</script>
+</body></html>
