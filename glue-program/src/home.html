@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glue Program Calculator · Unusual Machines</title>
+<style>
+:root{--bg:#221E32;--card:#fff;--line:#C5CDE3;--accent:#291E44;--accent2:#53478A;--ink:#221E32;--muted:#5A5670;--bad:#9c0006}
+@media (prefers-color-scheme:dark){:root{--bg:#15131F;--card:#2B2640;--line:#3E3760;--accent:#A0AED1;--accent2:#A0AED1;--ink:#EEEDF5;--muted:#B0ADC4;--bad:#ff8a8a}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--bg);color:var(--ink);font-family:Arial,"Helvetica Neue",Helvetica,system-ui,sans-serif}
+main{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:32px 28px;text-align:center;box-shadow:0 8px 30px rgba(60,40,120,.1)}
+h1{margin:0 0 4px;font-size:1.5rem}
+.sub{color:var(--muted);margin-bottom:24px}
+p{color:var(--muted);font-size:.95rem;margin:0 0 20px}
+form{display:flex;flex-direction:column;gap:12px}
+input{font:inherit;font-size:1.2rem;letter-spacing:.3em;text-align:center;padding:12px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--ink)}
+input:focus{outline:2px solid var(--accent2);outline-offset:1px}
+button{font:inherit;font-weight:600;padding:12px;border:0;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#221E32}}
+button:disabled{opacity:.6;cursor:wait}
+#err{min-height:1.2em;color:var(--bad);font-size:.9rem;margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Glue Program Calculator</h1>
+  <div class="sub">Fisnar F4000N · Motor Factory</div>
+  <p>Enter the password to open the calculator.</p>
+  <form id="f">
+    <input id="pw" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••" aria-label="Password" autofocus>
+    <button id="go" type="submit">Unlock</button>
+  </form>
+  <div id="err" role="alert"></div>
+</main>
+<script>
+const P = __PAYLOAD__;
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function unlock(pw){
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({name:'PBKDF2', salt:b64(P.s), iterations:P.n, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64(P.i)}, key, b64(P.c));
+  return new TextDecoder().decode(pt);
+}
+function open(html){ document.open(); document.write(html); document.close(); }
+const err = document.getElementById('err'), go = document.getElementById('go'), pw = document.getElementById('pw');
+async function attempt(v, silent){
+  go.disabled = true; err.textContent = '';
+  try { const html = await unlock(v); try { sessionStorage.setItem('glue-pw', v); } catch(e){} open(html); }
+  catch(e){ go.disabled = false; if (!silent){ err.textContent = window.crypto && crypto.subtle ? 'Wrong password' : 'This page needs HTTPS to unlock'; pw.select(); } }
+}
+document.getElementById('f').onsubmit = e => { e.preventDefault(); attempt(pw.value.trim()); };
+let saved = null; try { saved = sessionStorage.getItem('glue-pw'); } catch(e){}
+if (saved) attempt(saved, true);
+</script>
+</body>
+</html>
