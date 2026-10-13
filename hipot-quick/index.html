@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hipot Quick Log</title>
+<style>/* Unusual Machines theme */
+:root{--ink:#291E44;--ink-2:#53478A;--page:#FFFFFF;--panel:#FFFFFF;--lav:#E3E7F2;--lav-2:#F2F4FA;--edge:#C5CDE3;--edge-2:#A0AED1;--text:#221E32;--muted:#5A5670;--go:#1B6E3A;--go-bg:#E2F1E7;--stop:#A8261D;--stop-bg:#FBE7E4;--on-ink:#fff;--focus:#53478A;--btn:#291E44;--f:Arial,"Helvetica Neue",Helvetica,system-ui,sans-serif;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--ink:#C9D1EA;--ink-2:#A0AED1;--page:#1A1727;--panel:#221E32;--lav:#2E2948;--lav-2:#28243C;--edge:#3E3760;--edge-2:#53478A;--text:#EEEDF5;--muted:#B0ADC4;--go:#7FD39C;--go-bg:#16301F;--stop:#FF9A8F;--stop-bg:#3A1A17;--on-ink:#221E32;--focus:#A0AED1;--btn:#53478A;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font-family:var(--f);font-size:17px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--btn);color:#fff}
+.logo{background:#fff;border-radius:8px;padding:3px 8px;display:flex;align-items:center;height:46px}.logo img{height:40px;display:block}
+.brand{font-weight:700;font-size:22px;line-height:1.1}.brand small{display:block;font-weight:400;font-size:13px;opacity:.8}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h2{font-size:20px;margin:26px 0 10px;color:var(--ink)}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:18px}
+.target{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0 0 12px}
+.target b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.target span{font-size:26px;font-weight:700;color:var(--ink)}
+.mA{width:100%;font-size:46px;font-weight:700;text-align:center;min-height:78px;padding:6px 10px;border:2px solid var(--edge-2);border-radius:10px;background:var(--panel)}
+.unit{text-align:center;color:var(--muted);font-size:14px;margin:4px 0 10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--edge-2);background:var(--panel);color:var(--ink);font-weight:700;cursor:pointer}
+.btn.primary{background:var(--btn);border-color:var(--btn);color:#fff;width:100%;min-height:58px;font-size:19px}
+@media (prefers-color-scheme: dark){.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}}
+.btn.danger{color:var(--stop);border-color:var(--stop)}.btn.sm{min-height:36px;font-size:14px;padding:0 12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.err{color:var(--stop);min-height:1.3em;font-size:14px}
+.flash{background:var(--go-bg);color:var(--go);border-radius:10px;padding:8px 12px;font-weight:700;margin-bottom:12px}
+.bar{height:12px;border-radius:6px;background:var(--lav);overflow:hidden;margin:10px 0 4px}.bar i{display:block;height:100%;background:var(--ink-2)}
+.note{font-size:14px;color:var(--muted);margin:4px 0}
+.tw{overflow-x:auto;border:1px solid var(--edge);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:5px 7px;text-align:right;border-top:1px solid var(--edge);white-space:nowrap;font-variant-numeric:tabular-nums}
+thead th{background:var(--lav);color:var(--ink);border-top:0;font-size:12px}
+th:first-child,td:first-child{text-align:center;font-weight:700}
+td.c{cursor:pointer;min-width:52px}td.c:hover{background:var(--lav)}
+td.cur{outline:3px solid var(--ink-2);outline-offset:-3px;background:var(--lav-2)}
+td.done{color:var(--text)}td.empty{color:var(--edge-2)}
+tr.full td:first-child{background:var(--go-bg);color:var(--go)}
+details{margin-top:14px}summary{cursor:pointer;font-weight:700;color:var(--ink)}
+label.f{display:block;font-size:13px;font-weight:700;color:var(--ink);margin:8px 0 3px}
+input.t{width:100%;min-height:42px;padding:4px 10px;border:1.5px solid var(--edge-2);border-radius:8px;background:var(--panel)}
+.g3{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+[hidden]{display:none!important}
+#gate{position:fixed;inset:0;z-index:99;background:var(--page);display:flex;align-items:center;justify-content:center;padding:16px}
+#gate form{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:24px;width:100%;max-width:340px;text-align:center}
+#gate input{width:100%;font-size:24px;text-align:center;letter-spacing:.4em;padding:10px;border:1.5px solid var(--edge-2);border-radius:8px;background:var(--panel)}
+</style>
+</head>
+<body>
+<div id="gate" hidden><form id="gateForm"><h2 style="margin-top:0">Hipot Quick Log</h2><p class="note">Enter the passcode to continue.</p><input id="gatePw" type="password" inputmode="numeric" autocomplete="off" aria-label="Passcode"><div class="err" id="gateErr" role="alert"></div><button class="btn primary" type="submit" style="margin-top:6px">Unlock</button></form></div>
+<header class="top"><span class="logo"><img src="logo.png" alt="Unusual Machines"></span><span class="brand">Hipot Quick Log<small>20 samples × 10 trials · leakage (mA)</small></span></header>
+<main>
+<section class="card" id="entry"></section>
+<h2>All readings</h2>
+<p class="note">Tap any cell to jump to it (to enter or fix a value). σ = sample standard deviation of the 10 trials.</p>
+<div class="tw"><table id="grid"></table></div>
+<h2>Save your data</h2>
+<div class="row">
+<button class="btn" data-act="csv">Download CSV (list)</button>
+<button class="btn" data-act="gridcsv">Download CSV (20×10 grid)</button>
+<button class="btn" data-act="copy">Copy grid for Excel</button>
+<button class="btn" data-act="json">Backup (JSON)</button>
+<label class="btn" style="cursor:pointer">Restore backup<input type="file" id="restore" accept=".json,application/json" hidden></label>
+</div>
+<p class="note" id="copyMsg" role="status"></p>
+<p class="note">Readings are stored in <b>this browser on this device</b>. Use the same device and browser each time, don't clear site data or use a private window, and download a CSV at the end of each session.</p>
+<details class="card"><summary>Study details (optional)</summary>
+<div class="g3"><div><label class="f" for="op">Operator</label><input class="t" id="op" data-k="operator"></div>
+<div><label class="f" for="tid">Hipot tester ID</label><input class="t" id="tid" data-k="tester"></div>
+<div><label class="f" for="volts">Test voltage (V)</label><input class="t" id="volts" data-k="volts" inputmode="decimal"></div>
+<div><label class="f" for="nt">Notes</label><input class="t" id="nt" data-k="notes"></div></div>
+<p style="margin-top:14px"><button class="btn sm danger" data-act="reset">Delete all readings…</button></p></details>
+</main>
+<script>
+(function(){
+"use strict";
+var HASH="698eddbc91b225fd427a99e6d0c194e32cb8c99dd4322cb25c5cd52c52184ef2",GK="hipotq-unlocked",KEY="hipot-quick-v1",NS=20,NT=10;
+function sha(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(d){return Array.from(new Uint8Array(d)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")})}
+var gate=document.getElementById("gate");
+try{if(localStorage.getItem(GK)!==HASH){gate.hidden=false}}catch(e){gate.hidden=false}
+document.getElementById("gateForm").addEventListener("submit",function(ev){ev.preventDefault();var i=document.getElementById("gatePw");
+  sha(i.value.trim()).then(function(h){if(h===HASH){try{localStorage.setItem(GK,HASH)}catch(e){}gate.hidden=true;focusMa()}else{document.getElementById("gateErr").textContent="Incorrect passcode";i.value="";i.focus()}})});
+
+var D=load(),cur=null,msg="";
+function fresh(){return{operator:"",tester:"",volts:"500",notes:"",vals:{}}}  // vals["s-t"] = {ma,ts}
+function load(){try{var j=JSON.parse(localStorage.getItem(KEY));if(j&&j.vals)return Object.assign(fresh(),j)}catch(e){}return fresh()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){alert("Could not save in this browser (storage blocked or full). Download a backup now.")}}
+if(navigator.storage&&navigator.storage.persist)try{navigator.storage.persist()}catch(e){}
+function get(s,t){return D.vals[s+"-"+t]}
+function esc(x){return String(x==null?"":x).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function f3(x){return typeof x==="number"?x.toFixed(3):""}
+function next(){for(var s=1;s<=NS;s++)for(var t=1;t<=NT;t++)if(!get(s,t))return{s:s,t:t};return null}
+function count(){return Object.keys(D.vals).length}
+function stats(s){var v=[];for(var t=1;t<=NT;t++){var r=get(s,t);if(r)v.push(r.ma)}if(!v.length)return{};
+  var m=v.reduce(function(a,b){return a+b},0)/v.length,sd=v.length>1?Math.sqrt(v.reduce(function(a,b){return a+(b-m)*(b-m)},0)/(v.length-1)):null;return{m:m,sd:sd}}
+function focusMa(){var m=document.getElementById("ma");if(m&&gate.hidden)m.focus()}
+
+function render(){
+  if(!cur||cur.s<1||cur.s>NS)cur=next()||{s:NS,t:NT};
+  var n=count(),done=n===NS*NT,ex=get(cur.s,cur.t),e=document.getElementById("entry");
+  var h=(msg?'<div class="flash" role="status">'+esc(msg)+'</div>':'')
+   +'<div class="target"><div><b>Voltage</b><span>'+esc(D.volts||"500")+' V</span></div><div><b>Sample</b><span>'+cur.s+' of '+NS+'</span></div><div><b>Trial</b><span>'+cur.t+' of '+NT+'</span></div></div>'
+   +(done?'<div class="flash">All '+NS*NT+' readings entered. Download your data below.</div>':'')
+   +'<form id="f" autocomplete="off"><input id="ma" class="mA" type="text" inputmode="decimal" placeholder="0.000" aria-label="Leakage reading in milliamps" value="'+(ex?ex.ma:"")+'">'
+   +'<div class="unit">mA'+(ex?' · editing a saved value':'')+'</div><div class="err" id="err" role="alert"></div>'
+   +'<button class="btn primary" type="submit">'+(ex?'Update reading':'Save reading')+'</button></form>'
+   +'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(100*n/(NS*NT))+'%"></i></div><p class="note">'+n+' of '+NS*NT+' readings done.</p>'
+   +'<div class="row"><button class="btn sm" data-act="back">← Previous</button><button class="btn sm" data-act="fwd">Skip →</button><button class="btn sm" data-act="nextopen">Go to next empty</button><button class="btn sm danger" data-act="del"'+(ex?'':' disabled')+'>Clear this reading</button></div>';
+  e.innerHTML=h;
+  var g='<thead><tr><th>Sample</th>';for(var t=1;t<=NT;t++)g+='<th>T'+t+'</th>';g+='<th>Mean</th><th>σ</th></tr></thead><tbody>';
+  for(var s=1;s<=NS;s++){var st=stats(s),full=true;var row='';
+    for(t=1;t<=NT;t++){var r=get(s,t);if(!r)full=false;row+='<td class="c '+(r?'done':'empty')+(cur.s===s&&cur.t===t?' cur':'')+'" data-s="'+s+'" data-t="'+t+'">'+(r?f3(r.ma):"·")+'</td>'}
+    g+='<tr'+(full?' class="full"':'')+'><td>'+s+'</td>'+row+'<td>'+f3(st.m)+'</td><td>'+f3(st.sd)+'</td></tr>'}
+  document.getElementById("grid").innerHTML=g+'</tbody>';
+  ["operator","tester","volts","notes"].forEach(function(k){var i=document.querySelector('[data-k="'+k+'"]');if(i&&document.activeElement!==i)i.value=D[k]||""});
+  focusMa()}
+
+function advance(){var n=next();if(n)cur=n;else cur={s:NS,t:NT}}
+document.addEventListener("submit",function(ev){if(ev.target.id!=="f")return;ev.preventDefault();
+  var i=document.getElementById("ma"),v=parseFloat(i.value.replace(",","."));
+  if(!isFinite(v)||v<0||i.value.trim()===""){document.getElementById("err").textContent="Enter the reading as a number, e.g. 1.842";i.focus();return}
+  var wasEdit=!!get(cur.s,cur.t);D.vals[cur.s+"-"+cur.t]={ma:v,ts:Date.now()};save();
+  msg=(wasEdit?"Updated ":"Saved ")+v.toFixed(3)+" mA (sample "+cur.s+", trial "+cur.t+")";
+  var s0=cur.s;advance();if(cur.s!==s0&&!wasEdit)msg+=" · sample "+s0+" complete";render()});
+document.addEventListener("click",function(ev){
+  var c=ev.target.closest("td.c");if(c){cur={s:+c.dataset.s,t:+c.dataset.t};msg="";render();window.scrollTo(0,0);return}
+  var b=ev.target.closest("[data-act]");if(!b)return;
+  switch(b.dataset.act){
+    case"back":if(cur.t>1)cur.t--;else if(cur.s>1){cur.s--;cur.t=NT}msg="";render();break;
+    case"fwd":if(cur.t<NT)cur.t++;else if(cur.s<NS){cur.s++;cur.t=1}msg="";render();break;
+    case"nextopen":advance();msg="";render();break;
+    case"del":if(get(cur.s,cur.t)&&confirm("Clear the reading for sample "+cur.s+", trial "+cur.t+"?")){delete D.vals[cur.s+"-"+cur.t];save();msg="";render()}break;
+    case"csv":csv();break;case"gridcsv":gridcsv();break;case"copy":copy();break;case"json":dl("hipot-quick-backup-"+day()+".json",JSON.stringify(D),"application/json");break;
+    case"reset":if(count()&&prompt("This deletes all "+count()+" readings. Type DELETE to confirm.")==="DELETE"){D=Object.assign(fresh(),{operator:D.operator,tester:D.tester,volts:D.volts});save();cur=null;msg="";render()}break}});
+document.addEventListener("change",function(ev){var t=ev.target;
+  if(t.dataset.k){D[t.dataset.k]=t.value;save();if(t.dataset.k==="volts")render()}
+  else if(t.id==="restore"){var f=t.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{var j=JSON.parse(fr.result);if(!j.vals)throw 0;
+    if(confirm("Replace the current data with this backup ("+Object.keys(j.vals).length+" readings)?")){D=Object.assign(fresh(),j);save();cur=null;msg="";render()}}catch(x){alert("That isn't a valid backup file.")}};fr.readAsText(f)}});
+function day(){return new Date().toISOString().slice(0,10)}
+function dl(name,text,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+function q(x){x=x==null?"":String(x);return/[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x}
+function csv(){  // same column names as the main app / workbook "Test Data" sheet
+  var rows=[["Sample #","Trial #","Operator","Test Voltage (V)","Actual Test Result (mA)","Timestamp","Hipot Tester ID","Notes"].map(q).join(",")];
+  for(var s=1;s<=NS;s++)for(var t=1;t<=NT;t++){var r=get(s,t);if(r)rows.push([s,t,D.operator,D.volts,r.ma,new Date(r.ts).toISOString(),D.tester,D.notes].map(q).join(","))}
+  dl("hipot-quick-"+day()+".csv",rows.join("\r\n"),"text/csv")}
+function gridRows(sep){var rows=[["Sample"].concat(Array.from({length:NT},function(_,i){return"Trial "+(i+1)})).join(sep)];
+  for(var s=1;s<=NS;s++){var r=[s];for(var t=1;t<=NT;t++){var x=get(s,t);r.push(x?x.ma:"")}rows.push(r.join(sep))}return rows.join("\r\n")}
+function gridcsv(){dl("hipot-quick-grid-"+day()+".csv",gridRows(","),"text/csv")}
+function copy(){var m=document.getElementById("copyMsg"),t=gridRows("\t");
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){m.textContent="Copied – paste into Excel."},function(){m.textContent="Couldn't copy here – use the CSV download instead."})}
+render();
+})();
+</script>
+</body>
+</html>
