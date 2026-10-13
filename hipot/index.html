@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hipot Leakage R&amp;R</title>
+<style>/* Unusual Machines theme (matches unusualmachines.com) */
+:root{
+  --ink:#291E44; --ink-2:#53478A; --page:#FFFFFF; --panel:#FFFFFF; --lav:#E3E7F2; --lav-2:#F2F4FA; --edge:#C5CDE3; --edge-2:#A0AED1;
+  --text:#221E32; --muted:#5A5670; --go:#1B6E3A; --go-bg:#E2F1E7; --go-edge:#9CCDAE; --stop:#A8261D; --stop-bg:#FBE7E4; --stop-edge:#EBA9A2;
+  --warn:#8A5A00; --warn-bg:#FFF3D6; --warn-edge:#E6C36A;
+  --wait-bg:#EEF0F8; --on-ink:#FFFFFF; --focus:#53478A; --btn:#291E44; --navy:#221E32;
+  --f:Arial,"Helvetica Neue",Helvetica,system-ui,sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#C9D1EA; --ink-2:#A0AED1; --page:#1A1727; --panel:#221E32; --lav:#2E2948; --lav-2:#28243C; --edge:#3E3760; --edge-2:#53478A;
+  --text:#EEEDF5; --muted:#B0ADC4; --go:#7FD39C; --go-bg:#16301F; --go-edge:#2D6A43; --stop:#FF9A8F; --stop-bg:#3A1A17; --stop-edge:#7A3A33;
+  --warn:#F2C766; --warn-bg:#3A2E10; --warn-edge:#7A6228;
+  --wait-bg:#28243C; --on-ink:#221E32; --focus:#A0AED1; --btn:#53478A; --navy:#A0AED1; color-scheme: dark;}}
+:root[data-theme="dark"]{
+  --ink:#C9D1EA; --ink-2:#A0AED1; --page:#1A1727; --panel:#221E32; --lav:#2E2948; --lav-2:#28243C; --edge:#3E3760; --edge-2:#53478A;
+  --text:#EEEDF5; --muted:#B0ADC4; --go:#7FD39C; --go-bg:#16301F; --go-edge:#2D6A43; --stop:#FF9A8F; --stop-bg:#3A1A17; --stop-edge:#7A3A33;
+  --warn:#F2C766; --warn-bg:#3A2E10; --warn-edge:#7A6228;
+  --wait-bg:#28243C; --on-ink:#221E32; --focus:#A0AED1; --btn:#53478A; --navy:#A0AED1; color-scheme: dark;}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font-family:var(--f);font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom,0)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--btn);color:#fff}
+.logo{background:#fff;border-radius:8px;padding:3px 8px;display:flex;align-items:center;height:46px}
+.logo img{height:40px;width:auto;display:block}
+.brand{font-weight:700;font-size:22px;line-height:1.1}
+.brand small{display:block;font-weight:400;font-size:13px;opacity:.8}
+.tabs{display:flex;gap:2px;padding:0 12px;background:var(--lav);border-bottom:1px solid var(--edge);overflow-x:auto;position:sticky;top:0;z-index:5}
+.tabs button{flex:1 0 auto;min-height:48px;padding:0 18px;background:none;border:0;border-bottom:4px solid transparent;font-weight:700;color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{border-bottom-color:var(--ink-2);background:var(--panel)}
+main{max-width:1120px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:28px;line-height:1.15;margin:0 0 6px;color:var(--ink)}
+h2{font-size:21px;margin:26px 0 10px;color:var(--ink)}
+h3{font-size:17px;margin:0 0 8px;color:var(--ink)}
+.sub{color:var(--muted);margin:0 0 18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 18px;border-radius:10px;border:1.5px solid var(--edge-2);background:var(--panel);color:var(--ink);font-weight:700;cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--lav-2)}
+.btn.primary{background:var(--btn);border-color:var(--btn);color:#fff}
+:root[data-theme="dark"] .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}}
+.btn.danger{color:var(--stop);border-color:var(--stop-edge)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px}
+.btn[disabled]{opacity:.45;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:18px}
+.card+.card,.tw+details.card{margin-top:16px}
+.tag{display:inline-block;font-size:13px;font-weight:700;padding:2px 10px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.tag.go{background:var(--go-bg);color:var(--go);border-color:var(--go-edge)}
+.tag.stop{background:var(--stop-bg);color:var(--stop);border-color:var(--stop-edge)}
+.tag.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-edge)}
+.tag.wait{background:var(--lav);color:var(--ink)}
+.note{font-size:14px;color:var(--muted);margin:6px 0 0}
+.empty{color:var(--muted);padding:14px 0}
+label.f{display:block;font-size:14px;font-weight:700;color:var(--ink);margin:0 0 4px}
+input[type=text],input[type=number],input[type=date],input[type=password],select{width:100%;min-height:44px;padding:6px 10px;border:1.5px solid var(--edge-2);border-radius:8px;background:var(--panel)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.banner{border-radius:14px;padding:16px 18px;font-weight:700;border:1px solid;margin-bottom:16px}
+.banner.go{background:var(--go-bg);color:var(--go);border-color:var(--go-edge)}
+.banner.stop{background:var(--stop-bg);color:var(--stop);border-color:var(--stop-edge)}
+.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-edge)}
+.banner.wait{background:var(--lav);color:var(--ink);border-color:var(--edge)}
+
+/* test entry */
+.entry{display:grid;gap:18px;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+@media(max-width:800px){.entry{grid-template-columns:1fr}}
+.target{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0 0 14px}
+.target div{min-width:90px}
+.target b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.target span{font-size:22px;font-weight:700;color:var(--ink)}
+.mA{font-size:44px;font-weight:700;text-align:center;min-height:76px;letter-spacing:.02em}
+.unit{font-size:14px;color:var(--muted);text-align:center;margin:4px 0 12px}
+.flash{border-radius:12px;padding:12px 14px;margin-bottom:14px;border:1px solid;font-weight:700}
+.flash.go{background:var(--go-bg);color:var(--go);border-color:var(--go-edge)}
+.flash.stop{background:var(--stop-bg);color:var(--stop);border-color:var(--stop-edge)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:1.5px solid var(--edge);border-radius:10px;padding:6px 10px;min-width:74px;text-align:center;background:var(--lav-2)}
+.chip small{display:block;font-size:11px;color:var(--muted)}
+.chip.p{border-color:var(--go-edge);background:var(--go-bg)}
+.chip.fl{border-color:var(--stop-edge);background:var(--stop-bg)}
+.chip.next{border-style:dashed;border-color:var(--ink-2)}
+.bar{height:10px;border-radius:6px;background:var(--lav);overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;background:var(--ink-2)}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--edge);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:8px 10px;text-align:left;white-space:nowrap;border-top:1px solid var(--edge)}
+thead th{border-top:0;background:var(--lav);color:var(--ink);font-size:13px;position:sticky;top:0}
+tbody tr:nth-child(even){background:var(--lav-2)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi span{font-size:24px;font-weight:700;color:var(--ink)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.seg button{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--edge-2);background:var(--panel);font-weight:700;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--btn);border-color:var(--btn);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}}
+details.card summary{cursor:pointer;font-weight:700;color:var(--ink)}
+.crit{margin:0;padding-left:20px;font-size:15px;color:var(--muted)}
+.part{border:1px solid var(--edge);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--lav-2)}
+.vlim{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:10px}
+.vlim div{display:flex;gap:6px;align-items:end}
+.vlim label{font-size:12px;color:var(--muted);display:block}
+[hidden]{display:none!important}
+#gate{position:fixed;inset:0;z-index:99;background:var(--page);display:flex;align-items:center;justify-content:center;padding:16px}
+#gate form{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:24px;width:100%;max-width:340px;text-align:center}
+#gate input,.pin input{font-size:24px;text-align:center;letter-spacing:.4em}
+.err{color:var(--stop);min-height:1.3em;margin-top:8px;font-size:14px}
+.pin{max-width:360px;margin:30px auto;text-align:center}
+</style>
+</head>
+<body>
+<div id="gate" hidden><form id="gateForm"><h2 style="margin-top:0">Hipot Leakage R&amp;R</h2><p class="sub">Enter the passcode to continue.</p><input id="gatePw" type="password" inputmode="numeric" autocomplete="off" aria-label="Passcode"><div class="err" id="gateErr" role="alert"></div><button class="btn primary" style="width:100%;margin-top:8px" type="submit">Unlock</button></form></div>
+
+<header class="top"><span class="logo"><img src="logo.png" alt="Unusual Machines"></span><span class="brand">Hipot Leakage R&amp;R<small>Stator electrical test · repeatability study</small></span></header>
+<nav class="tabs" role="tablist" id="tabs"></nav>
+<main id="view"></main>
+
+<script>
+(function(){
+"use strict";
+/* ---------- gate (same passcode as the other shop apps) ---------- */
+var HASH="698eddbc91b225fd427a99e6d0c194e32cb8c99dd4322cb25c5cd52c52184ef2",GKEY="hipot-unlocked";
+function sha(s){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(d){return Array.from(new Uint8Array(d)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")})}
+function unlocked(){try{return localStorage.getItem(GKEY)===HASH}catch(e){return false}}
+var gate=document.getElementById("gate");
+if(!unlocked()){gate.hidden=false;document.getElementById("gatePw").focus()}
+document.getElementById("gateForm").addEventListener("submit",function(ev){ev.preventDefault();
+  var i=document.getElementById("gatePw");sha(i.value.trim()).then(function(h){
+    if(h===HASH){try{localStorage.setItem(GKEY,HASH)}catch(e){}gate.hidden=true}
+    else{document.getElementById("gateErr").textContent="Incorrect passcode";i.value="";i.focus()}})});
+
+/* ---------- state ---------- */
+var LS="hipot-rr-v1",MAXS=20,NSETS=6;
+function uid(){return Math.random().toString(36).slice(2,9)}
+function fresh(){return{info:{testerId:"",fixtureId:"",date:"",ramp:"",trials:10,tripMa:""},
+  operators:[],operator:"",parts:[],volts:["","","","","",""],samples:new Array(MAXS).fill(""),readings:[],ownerHash:""}}
+var S=load();
+function load(){try{var j=JSON.parse(localStorage.getItem(LS));if(j&&j.info){var f=fresh();for(var k in f)if(!(k in j))j[k]=f[k];return j}}catch(e){}return fresh()}
+var saveOk=true;
+function save(){try{localStorage.setItem(LS,JSON.stringify(S));saveOk=true}catch(e){saveOk=false;alert("Could not save to this browser (storage blocked or full). Export a backup from Settings.")}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function num(x){var n=parseFloat(x);return isFinite(n)?n:null}
+function f3(x){return x==null||x===""?"":(typeof x==="number"?x.toFixed(3):x)}
+function pct(x){return x==null||x===""?"":(typeof x==="number"?(x*100).toFixed(1)+"%":x)}
+function N(){return Math.max(1,Math.min(50,parseInt(S.info.trials,10)||10))}
+function activeSets(){var a=[];S.volts.forEach(function(v,i){if(num(v)>0)a.push(i+1)});return a}
+function partById(id){return S.parts.find(function(p){return p.id===id})}
+function activeSamples(){var a=[];S.samples.forEach(function(id,i){if(id&&partById(id))a.push(i+1)});return a}
+function limitsFor(part,set){var o=part.lim&&part.lim[set]||{};var mn=num(o.min),mx=num(o.max);
+  return{min:mn!=null?mn:(num(part.min)||0),max:mx!=null?mx:num(part.max)}}
+function setLabel(set){return num(S.volts[set-1])+" V"}
+function rd(set,sample){return S.readings.filter(function(r){return r.set===set&&r.sample===sample}).sort(function(a,b){return a.trial-b.trial})}
+function passed(r){return r.ma>=r.min&&r.ma<=r.max}
+function correct(r){return (r.status==="Good")===passed(r)}
+
+/* ---------- statistics (mirrors the workbook's Summary sheets) ---------- */
+function mean(a){return a.reduce(function(s,x){return s+x},0)/a.length}
+function sd(a){if(a.length<2)return null;var m=mean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/(a.length-1))}
+function slope(xs,ys){var mx=mean(xs),my=mean(ys),n=0,d=0;for(var i=0;i<xs.length;i++){n+=(xs[i]-mx)*(ys[i]-my);d+=(xs[i]-mx)*(xs[i]-mx)}return d?n/d:null}
+function sampleStats(set,sample){
+  var rs=rd(set,sample);if(!rs.length)return null;
+  var f=rs[0],v=rs.map(function(r){return r.ma}),m=mean(v),s=sd(v),mn=f.min,mx=f.max;
+  var o={sample:sample,pn:f.pn,status:f.status,volts:f.v,min:mn,max:mx,n:rs.length,mean:m,sd:s,lo:Math.min.apply(0,v),hi:Math.max.apply(0,v)};
+  o.range=o.hi-o.lo;o.spread=s==null?null:6*s;
+  o.pctTol=(o.spread!=null&&mx!=null&&mx-mn>0)?o.spread/(mx-mn):null;
+  if(s==null||mx==null)o.margin=null;else if(s===0)o.margin="No variation";
+  else o.margin=(f.status==="Good"?Math.min(m-mn,mx-m):Math.max(m-mx,mn-m))/s;
+  o.pass=rs.filter(passed).length;o.fail=o.n-o.pass;
+  o.correct=rs.filter(correct).length/o.n;
+  o.drift=rs.length>=3?slope(rs.map(function(r){return r.trial}),v)*(N()-1):null;
+  var chk="OK";
+  if(rs.some(function(r){return r.pn!==f.pn}))chk="P/N varies";
+  else if(rs.some(function(r){return r.status!==f.status}))chk="Status varies";
+  else if(rs.some(function(r){return r.v!==f.v||r.min!==f.min||r.max!==f.max}))chk="Voltage/limits vary";
+  else if(o.n<N())chk="Only "+o.n+" of "+N()+" runs";
+  o.check=chk;
+  var good=f.status==="Good",num_=typeof o.margin==="number";
+  if(o.correct<1||(good&&o.pctTol!=null&&o.pctTol>0.3))o.result="FAIL";
+  else if((good&&o.pctTol!=null&&o.pctTol>=0.1)||(num_&&o.margin<3))o.result="MARGINAL";
+  else o.result="OK";
+  return o}
+function setStats(set){
+  var rows=[];activeSamples().forEach(function(s){var o=sampleStats(set,s);if(o)rows.push(o)});
+  // include samples that have data but were later unassigned
+  var seen={};rows.forEach(function(r){seen[r.sample]=1});
+  S.readings.forEach(function(r){if(r.set===set&&!seen[r.sample]){seen[r.sample]=1;var o=sampleStats(set,r.sample);if(o)rows.push(o)}});
+  rows.sort(function(a,b){return a.sample-b.sample});
+  var all=S.readings.filter(function(r){return r.set===set});
+  var T={rows:rows,samples:rows.length,tests:all.length};
+  if(!rows.length)return T;
+  T.good=rows.filter(function(r){return r.status==="Good"}).length;T.bad=rows.length-T.good;
+  T.correctCalls=all.filter(correct).length/all.length;
+  T.falseRej=all.filter(function(r){return r.status==="Good"&&!passed(r)}).length;
+  T.falseAcc=all.filter(function(r){return r.status==="Bad"&&passed(r)}).length;
+  var gv=rows.filter(function(r){return r.status==="Good"&&r.sd!=null}).map(function(r){return r.sd*r.sd});
+  T.pooled=gv.length?Math.sqrt(mean(gv)):null;
+  var gp=rows.filter(function(r){return r.status==="Good"&&r.pctTol!=null}).map(function(r){return r.pctTol});
+  T.worstPct=gp.length?Math.max.apply(0,gp):null;
+  var mg=rows.filter(function(r){return typeof r.margin==="number"}).map(function(r){return r.margin});
+  T.minMargin=mg.length?Math.min.apply(0,mg):null;
+  T.ok=rows.filter(function(r){return r.result==="OK"}).length;
+  T.marg=rows.filter(function(r){return r.result==="MARGINAL"}).length;
+  T.failS=rows.filter(function(r){return r.result==="FAIL"}).length;
+  var ops=[];all.forEach(function(r){if(r.op&&ops.indexOf(r.op)<0)ops.push(r.op)});T.ops=ops;
+  if(T.falseAcc>0||T.failS>0){T.verdict="NOT ACCEPTABLE – "+(T.falseAcc>0?"tester passed a known-bad part":"see FAIL samples");T.cls="stop"}
+  else if(T.marg>0){T.verdict="CONDITIONALLY ACCEPTABLE – review MARGINAL samples";T.cls="warn"}
+  else{T.verdict="ACCEPTABLE – tester is repeatable and sorts good/bad correctly";T.cls="go"}
+  return T}
+function tagFor(res){return res==="OK"?"go":res==="FAIL"?"stop":"warn"}
+
+/* ---------- ui state ---------- */
+var tab="test",cur={set:null,sample:null},flash=null,resSet="overview",dataSet=0,ownerOpen=false,pinMsg="";
+var TABS=[["test","Test"],["results","Results"],["data","Data"],["settings","Settings"]];
+function nextPending(){
+  var sets=activeSets(),samps=activeSamples(),n=N();
+  for(var i=0;i<sets.length;i++)for(var j=0;j<samps.length;j++)if(rd(sets[i],samps[j]).length<n)return{set:sets[i],sample:samps[j]};
+  return null}
+function nextTrial(set,sample){var used={};rd(set,sample).forEach(function(r){used[r.trial]=1});for(var t=1;t<=N();t++)if(!used[t])return t;return null}
+function curValid(){return cur.set&&cur.sample&&activeSets().indexOf(cur.set)>=0&&activeSamples().indexOf(cur.sample)>=0}
+
+/* ---------- renderers ---------- */
+var V=document.getElementById("view");
+function render(){
+  document.getElementById("tabs").innerHTML=TABS.map(function(t){return'<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+'</button>'}).join("");
+  V.innerHTML=({test:rTest,results:rResults,data:rData,settings:rSettings})[tab]();
+  if(tab==="test"){var m=document.getElementById("ma");if(m&&!m.disabled)m.focus()}
+}
+
+function rTest(){
+  var sets=activeSets(),samps=activeSamples();
+  if(!sets.length||!samps.length||!S.operators.length&&false)
+    return'<h1>Test</h1><div class="card"><h3>Study not set up yet</h3><p class="sub">'+(!sets.length?'No test voltage is set. ':'')+(!samps.length?'No samples are assigned to a part. ':'')+'Open <b>Settings</b> to enter the test voltages, parts and samples, then come back here.</p><button class="btn primary" data-tab="settings">Go to Settings</button></div>';
+  if(!curValid()){var np=nextPending();cur=np?{set:np.set,sample:np.sample}:{set:sets[0],sample:samps[0]}}
+  var part=partById(S.samples[cur.sample-1]),lim=limitsFor(part,cur.set),n=N(),rs=rd(cur.set,cur.sample),t=nextTrial(cur.set,cur.sample),full=t==null;
+  var done=S.readings.length,total=sets.length*samps.length*n,np2=nextPending();
+  var h='<h1>Enter hipot reading</h1><p class="sub">Type the leakage current from the tester in mA. Everything else comes from Settings.</p>';
+  if(flash)h+='<div class="flash '+flash.cls+'" role="status">'+flash.text+'</div>';
+  h+='<div class="entry"><section class="card"><div class="target">'
+   +'<div><b>Voltage</b><span>'+esc(setLabel(cur.set))+'</span></div>'
+   +'<div><b>Sample</b><span>'+cur.sample+'</span></div>'
+   +'<div><b>Trial</b><span>'+(full?'—':t+' of '+n)+'</span></div></div>'
+   +'<p class="note" style="margin:-4px 0 12px">P/N <b>'+esc(part.pn)+'</b> · Known <b>'+esc(part.status)+'</b> · Limit '+f3(lim.min)+' – '+(lim.max==null?'<span style="color:var(--stop)">no max set</span>':f3(lim.max))+' mA'+(S.operator||S.operators.length?' · Operator <b>'+esc(S.operator||S.operators[0])+'</b>':'')+'</p>';
+  if(full){
+    h+='<div class="banner go">Sample '+cur.sample+' at '+esc(setLabel(cur.set))+' has all '+n+' trials.</div>'+(np2?'<button class="btn primary" data-act="next">Go to next: '+esc(setLabel(np2.set))+', sample '+np2.sample+'</button>':'<div class="banner wait">Study complete – see Results.</div>');
+  }else{
+    h+='<form id="entry" autocomplete="off"><label class="f" for="ma">Actual test result (mA)</label><input id="ma" class="mA" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.000" aria-label="Leakage reading in milliamps">'
+     +'<div class="unit">mA</div><div class="err" id="entryErr" role="alert" style="margin:-6px 0 8px"></div>'
+     +'<button class="btn primary" type="submit" style="width:100%;min-height:56px;font-size:18px">Save reading</button></form>'
+     +'<div class="row" style="margin-top:10px">'+(num(S.info.tripMa)!=null?'<button class="btn sm" data-act="trip" title="Records the trip/max reading from Settings (counts as FAIL)">Tester tripped (no value)</button>':'')+(rs.length?'<button class="btn sm danger" data-act="undo">Undo last reading</button>':'')+'</div>';
+  }
+  h+='</section><section class="card"><h3>Sample '+cur.sample+' · '+esc(setLabel(cur.set))+'</h3><div class="chips">';
+  for(var i=1;i<=n;i++){var r=rs.find(function(x){return x.trial===i});
+    h+=r?'<div class="chip '+(correct(r)?'p':'fl')+'"><small>Trial '+i+'</small><b>'+f3(r.ma)+'</b><small>'+(passed(r)?'PASS':'FAIL')+'</small></div>'
+        :'<div class="chip'+(i===t?' next':'')+'"><small>Trial '+i+'</small><b>–</b><small>&nbsp;</small></div>'}
+  h+='</div><div class="bar" aria-hidden="true"><i style="width:'+Math.round(100*rs.length/n)+'%"></i></div><p class="note">'+rs.length+' of '+n+' trials done on this sample. Study: '+done+' of '+total+' readings.</p>'
+   +'<div class="grid" style="margin-top:14px"><div><label class="f" for="selSet">Voltage</label><select id="selSet">'+sets.map(function(s){return'<option value="'+s+'"'+(s===cur.set?' selected':'')+'>'+esc(setLabel(s))+'</option>'}).join("")+'</select></div>'
+   +'<div><label class="f" for="selSample">Sample</label><select id="selSample">'+samps.map(function(s){var cnt=rd(cur.set,s).length;return'<option value="'+s+'"'+(s===cur.sample?' selected':'')+'>'+s+' – '+esc(partById(S.samples[s-1]).pn)+' ('+cnt+'/'+n+')</option>'}).join("")+'</select></div>'
+   +(S.operators.length>1?'<div><label class="f" for="selOp">Operator</label><select id="selOp">'+S.operators.map(function(o){return'<option'+((S.operator||S.operators[0])===o?' selected':'')+'>'+esc(o)+'</option>'}).join("")+'</select></div>':'')+'</div>'
+   +(np2&&!(np2.set===cur.set&&np2.sample===cur.sample)?'<p style="margin:12px 0 0"><button class="btn sm" data-act="next">Jump to next pending</button></p>':'')
+   +'<p class="note">Parts degrade after about 10 tests – stop at '+n+' trials per sample.</p></section></div>';
+  return h}
+
+function table(head,rows,cls){return'<div class="tw"><table><thead><tr>'+head.map(function(x,i){return'<th'+(cls&&cls[i]?' class="'+cls[i]+'"':'')+'>'+x+'</th>'}).join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table></div>'}
+function rResults(){
+  var sets=activeSets(),h='<h1>Results</h1><p class="sub">Repeatability and correct-call analysis, calculated live from the readings.</p>';
+  var any=S.readings.length>0;
+  h+='<div class="seg" role="group" aria-label="View"><button data-rs="overview" aria-pressed="'+(resSet==="overview")+'">Overview</button>'+sets.map(function(s){return'<button data-rs="'+s+'" aria-pressed="'+(resSet===String(s))+'">V'+s+' · '+esc(setLabel(s))+'</button>'}).join("")+'</div>';
+  if(!any)return h+'<div class="card empty">No readings yet. Enter some on the Test tab.</div>';
+  if(resSet==="overview"||sets.map(String).indexOf(resSet)<0)return h+rOverview(sets);
+  var set=parseInt(resSet,10),T=setStats(set);
+  if(!T.rows.length)return h+'<div class="card empty">No readings for this voltage yet.</div>';
+  h+='<div class="banner '+T.cls+'">'+esc(T.verdict)+'</div><div class="kpis">'
+   +kpi("Samples tested",T.samples+" ("+T.good+" good / "+T.bad+" bad)")+kpi("Total tests",T.tests)+kpi("Correct calls",pct(T.correctCalls))
+   +kpi("False rejects",T.falseRej)+kpi("False accepts",T.falseAcc)+kpi("Pooled σ, good (mA)",f3(T.pooled)||"–")
+   +kpi("Worst % of tol., good",pct(T.worstPct)||"–")+kpi("Smallest margin (σ)",T.minMargin==null?"–":T.minMargin.toFixed(1))
+   +kpi("Samples OK / MARG / FAIL",T.ok+" / "+T.marg+" / "+T.failS)+kpi("Operator(s)",T.ops.length?esc(T.ops.join(", ")):"–")+'</div>';
+  h+='<h2>Per-sample results</h2>'+table(["Sample","P/N","Known","Min","Max","Tests","Mean (mA)","σ (mA)","Low","High","Range","6σ","% of tol.","Margin (σ)","Pass","Fail","Correct","Drift (mA)","Data check","Result"],
+    T.rows.map(function(r){return'<tr><td>'+r.sample+'</td><td>'+esc(r.pn)+'</td><td>'+r.status+'</td><td class="n">'+f3(r.min)+'</td><td class="n">'+f3(r.max)+'</td><td class="n">'+r.n+'</td><td class="n">'+f3(r.mean)+'</td><td class="n">'+f3(r.sd)+'</td><td class="n">'+f3(r.lo)+'</td><td class="n">'+f3(r.hi)+'</td><td class="n">'+f3(r.range)+'</td><td class="n">'+f3(r.spread)+'</td><td class="n">'+(r.status==="Good"?pct(r.pctTol):"")+'</td><td class="n">'+(typeof r.margin==="number"?r.margin.toFixed(1):esc(r.margin||""))+'</td><td class="n">'+r.pass+'</td><td class="n">'+r.fail+'</td><td class="n">'+pct(r.correct)+'</td><td class="n">'+f3(r.drift)+'</td><td>'+(r.check==="OK"?"OK":'<span class="tag warn">'+esc(r.check)+'</span>')+'</td><td><span class="tag '+tagFor(r.result)+'">'+r.result+'</span></td></tr>'}),
+    ["","","","n","n","n","n","n","n","n","n","n","n","n","n","n","n","n","",""]);
+  h+=criteria();
+  return h}
+function kpi(l,v){return'<div class="kpi"><b>'+l+'</b><span>'+v+'</span></div>'}
+function criteria(){return'<details class="card"><summary>How these are judged</summary><ul class="crit"><li>% of tolerance = 6σ ÷ (Max − Min), judged on Good parts: &lt; 10% good, 10–30% marginal, &gt; 30% poor.</li><li>Margin: standard deviations the mean sits on the correct side of the nearest limit (inside the limits for Good, beyond a limit for Bad). 3σ or more is reliable.</li><li>Correct calls must be 100%: Good parts must PASS and Bad parts must FAIL every time. A Bad part that passes (false accept) fails the study.</li><li>Drift: change from trial 1 to trial '+N()+' (straight-line fit). Large drift suggests the part is degrading or heating.</li><li>Sample result – FAIL: any wrong call or % of tolerance &gt; 30% (Good). MARGINAL: 10–30% (Good) or margin &lt; 3σ. Otherwise OK.</li></ul></details>'}
+function rOverview(sets){
+  var h='<h2>Summary by voltage</h2>';
+  var rows=sets.map(function(s){var T=setStats(s);if(!T.rows.length)return'<tr><td>V'+s+'</td><td class="n">'+num(S.volts[s-1])+'</td><td colspan="9" style="color:var(--muted)">No data</td></tr>';
+    return'<tr><td>V'+s+'</td><td class="n">'+num(S.volts[s-1])+'</td><td class="n">'+T.samples+'</td><td class="n">'+T.tests+'</td><td class="n">'+pct(T.correctCalls)+'</td><td class="n">'+T.falseRej+'</td><td class="n">'+T.falseAcc+'</td><td class="n">'+f3(T.pooled)+'</td><td class="n">'+pct(T.worstPct)+'</td><td class="n">'+(T.minMargin==null?"":T.minMargin.toFixed(1))+'</td><td class="n">'+T.ok+' / '+T.marg+' / '+T.failS+'</td><td><span class="tag '+T.cls.replace("go","go")+'">'+(T.cls==="go"?"ACCEPTABLE":T.cls==="warn"?"CONDITIONAL":"NOT ACCEPTABLE")+'</span></td></tr>'});
+  h+=table(["Set","Volts","Samples","Tests","Correct calls","False rej.","False acc.","Pooled σ good","Worst %tol","Min margin","OK / MARG / FAIL","Result"],rows,["","n","n","n","n","n","n","n","n","n","n",""]);
+  var samples={};S.readings.forEach(function(r){samples[r.sample]=1});var sl=Object.keys(samples).map(Number).sort(function(a,b){return a-b});
+  h+='<h2>Mean leakage (mA) by sample and voltage</h2>'+table(["Sample","P/N","Known"].concat(sets.map(function(s){return esc(setLabel(s))+" mean"}),sets.map(function(s){return esc(setLabel(s))+" result"})),
+    sl.map(function(sm){var first=S.readings.find(function(r){return r.sample===sm});
+      return'<tr><td>'+sm+'</td><td>'+esc(first.pn)+'</td><td>'+first.status+'</td>'+sets.map(function(s){var o=sampleStats(s,sm);return'<td class="n">'+(o?f3(o.mean):"")+'</td>'}).join("")+sets.map(function(s){var o=sampleStats(s,sm);return'<td>'+(o?'<span class="tag '+tagFor(o.result)+'">'+o.result+'</span>':"")+'</td>'}).join("")+'</tr>'}),
+    ["","",""].concat(sets.map(function(){return"n"}),sets.map(function(){return""})));
+  return h+criteria()}
+
+function rData(){
+  var sets=activeSets(),list=S.readings.slice().sort(function(a,b){return a.set-b.set||a.sample-b.sample||a.trial-b.trial});
+  if(dataSet)list=list.filter(function(r){return r.set===dataSet});
+  var h='<h1>Data</h1><p class="sub">Every reading, in the same layout as the workbook\'s Test Data sheets. Fix a typo by editing the mA value.</p>'
+   +'<div class="row" style="margin-bottom:12px"><button class="btn primary" data-act="csv">Download CSV</button><select id="dataSet" style="width:auto" aria-label="Filter by voltage"><option value="0">All voltages</option>'+sets.map(function(s){return'<option value="'+s+'"'+(dataSet===s?' selected':'')+'>V'+s+' · '+esc(setLabel(s))+'</option>'}).join("")+'</select><span class="note" style="margin:0">'+list.length+' readings</span></div>';
+  if(!list.length)return h+'<div class="card empty">No readings yet.</div>';
+  return h+table(["Set","Sample","Trial","Stator P/N","Known","Operator","Volts","Min","Max","Actual (mA)","Pass/Fail","Correct?","Time",""],
+    list.map(function(r){return'<tr><td>V'+r.set+'</td><td>'+r.sample+'</td><td>'+r.trial+'</td><td>'+esc(r.pn)+'</td><td>'+r.status+'</td><td>'+esc(r.op)+'</td><td class="n">'+r.v+'</td><td class="n">'+f3(r.min)+'</td><td class="n">'+f3(r.max)+'</td><td><input type="text" inputmode="decimal" value="'+r.ma+'" data-edit="'+r.id+'" aria-label="Reading mA" style="width:96px;min-height:34px;padding:2px 8px"></td><td><span class="tag '+(passed(r)?'go':'stop')+'">'+(passed(r)?'PASS':'FAIL')+'</span></td><td>'+(correct(r)?'YES':'<b style="color:var(--stop)">NO</b>')+'</td><td>'+esc(new Date(r.ts).toLocaleString())+(r.tripped?' · tripped':'')+'</td><td><button class="btn sm danger" data-del="'+r.id+'">Delete</button></td></tr>'}),
+    ["","","","","","","n","n","n","","","","",""])}
+
+/* ---------- settings (owner page) ---------- */
+function rSettings(){
+  if(!S.ownerHash)return'<div class="card pin"><h1>Set owner PIN</h1><p class="sub">Settings are protected by an owner PIN so operators can\'t change limits or delete data. Choose one (4+ characters).</p><form id="pinNew"><input type="password" id="pin1" autocomplete="off" aria-label="New PIN"><div style="height:8px"></div><input type="password" id="pin2" autocomplete="off" aria-label="Confirm PIN" placeholder="confirm"><div class="err" role="alert">'+esc(pinMsg)+'</div><button class="btn primary" style="width:100%" type="submit">Save PIN</button></form></div>';
+  if(!ownerOpen)return'<div class="card pin"><h1>Owner settings</h1><p class="sub">Enter the owner PIN.</p><form id="pinIn"><input type="password" id="pin" autocomplete="off" aria-label="Owner PIN"><div class="err" role="alert">'+esc(pinMsg)+'</div><button class="btn primary" style="width:100%" type="submit">Open settings</button></form></div>';
+  var I=S.info;
+  function inp(path,val,type,label,extra){return'<div><label class="f">'+label+'</label><input type="'+(type||"text")+'" data-path="'+path+'" value="'+esc(val)+'" '+(extra||"")+'></div>'}
+  var h='<div class="row" style="justify-content:space-between"><h1>Settings</h1><button class="btn sm" data-act="lock">Lock settings</button></div><p class="sub">Owner page – changes save automatically. Readings already recorded keep the values they were entered with.</p>';
+  h+='<div class="card"><h3>Study info</h3><div class="grid">'+inp("info.testerId",I.testerId,"text","Hipot tester ID")+inp("info.fixtureId",I.fixtureId,"text","Fixture / lead set ID")+inp("info.date",I.date,"date","Study date")+inp("info.ramp",I.ramp,"text","Ramp / dwell time")+inp("info.trials",I.trials,"number","Trials per sample",'min="1" max="50" step="1"')+inp("info.tripMa",I.tripMa,"number","Trip / max reading (mA) for “Tester tripped” button",'min="0" step="any" placeholder="blank = no button"')+'</div></div>';
+  h+='<div class="card"><h3>Test voltages (up to 6)</h3><p class="note" style="margin:0 0 10px">Leave unused voltages blank. Each active voltage gets its own run of every sample.</p><div class="grid">'+S.volts.map(function(v,i){return inp("volts."+i,v,"number","V"+(i+1)+" (volts)",'min="0" step="any"')}).join("")+'</div></div>';
+  h+='<div class="card"><h3>Operators</h3><div class="grid">'+S.operators.map(function(o,i){return'<div><label class="f">Operator '+(i+1)+'</label><div class="row" style="flex-wrap:nowrap"><input type="text" data-path="operators.'+i+'" value="'+esc(o)+'"><button class="btn sm danger" data-rmop="'+i+'" aria-label="Remove operator">✕</button></div></div>'}).join("")+'</div><p style="margin:12px 0 0"><button class="btn sm" data-act="addop">+ Add operator</button></p><p class="note">One operator for a standard study. With several, the Test page shows a picker.</p></div>';
+  h+='<div class="card"><h3>Stator parts</h3><p class="note" style="margin:0 0 10px">Each part has a known status and leakage limits. Different part numbers can have different limits. Optional per-voltage limits override the defaults.</p>'
+   +S.parts.map(function(p,i){return'<div class="part"><div class="grid">'+inp("parts."+i+".pn",p.pn,"text","Stator part number")
+     +'<div><label class="f">Known status</label><select data-path="parts.'+i+'.status"><option'+(p.status==="Good"?" selected":"")+'>Good</option><option'+(p.status==="Bad"?" selected":"")+'>Bad</option></select></div>'
+     +inp("parts."+i+".min",p.min,"number","Min leakage (mA)",'step="any" min="0"')+inp("parts."+i+".max",p.max,"number","Max leakage (mA)",'step="any" min="0"')+'</div>'
+     +'<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;color:var(--ink)">Per-voltage limits (optional)</summary><div class="vlim">'+activeSets().map(function(s){var o=p.lim&&p.lim[s]||{};return'<div><div><label>V'+s+' min</label><input type="number" step="any" data-path="parts.'+i+'.lim.'+s+'.min" value="'+esc(o.min==null?"":o.min)+'"></div><div><label>V'+s+' max</label><input type="number" step="any" data-path="parts.'+i+'.lim.'+s+'.max" value="'+esc(o.max==null?"":o.max)+'"></div></div>'}).join("")+(activeSets().length?'':'<span class="note">Set a test voltage first.</span>')+'</div></details>'
+     +'<p style="margin:10px 0 0"><button class="btn sm danger" data-rmpart="'+i+'">Remove part</button></p></div>'}).join("")
+   +'<button class="btn sm" data-act="addpart">+ Add part</button></div>';
+  h+='<div class="card"><h3>Samples</h3><p class="note" style="margin:0 0 10px">Assign a part to each numbered sample (up to '+MAXS+'). Leave blank to skip a sample.</p><div class="grid">'+S.samples.map(function(id,i){return'<div><label class="f">Sample '+(i+1)+'</label><select data-sample="'+i+'"><option value="">— none —</option>'+S.parts.map(function(p){return'<option value="'+p.id+'"'+(p.id===id?" selected":"")+'>'+esc(p.pn||"(no P/N)")+' · '+p.status+'</option>'}).join("")+'</select></div>'}).join("")+'</div></div>';
+  h+='<div class="card"><h3>Data &amp; backup</h3><p class="note" style="margin:0 0 10px">Readings are saved in this browser on this device. Download a backup regularly; import it to move the study to another device.</p><div class="row"><button class="btn" data-act="csv">Download CSV</button><button class="btn" data-act="backup">Backup (JSON)</button><label class="btn" style="cursor:pointer">Restore backup<input type="file" accept=".json,application/json" id="restore" hidden></label><button class="btn danger" data-act="clearread">Delete all readings</button><button class="btn danger" data-act="changepin">Change owner PIN</button></div></div>';
+  return h}
+
+/* ---------- actions ---------- */
+function setPath(path,val){var k=path.split("."),o=S;for(var i=0;i<k.length-1;i++){if(o[k[i]]==null)o[k[i]]={};o=o[k[i]]}o[k[k.length-1]]=val}
+function download(name,text,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+function csv(){
+  var q=function(x){x=x==null?"":String(x);return/[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+  var head=["Sample #","Trial #","Stator Part Number","Known Status","Operator","Test Voltage (V)","Min Acceptable Leakage (mA)","Max Acceptable Leakage (mA)","Actual Test Result (mA)","Pass / Fail","Correct Call?","Voltage Set","Timestamp","Tester tripped","Hipot Tester ID","Fixture ID","Study Date","Ramp/Dwell"];
+  var rows=S.readings.slice().sort(function(a,b){return a.set-b.set||a.sample-b.sample||a.trial-b.trial}).map(function(r){return[r.sample,r.trial,r.pn,r.status,r.op,r.v,r.min,r.max,r.ma,passed(r)?"PASS":"FAIL",correct(r)?"YES":"NO","V"+r.set,new Date(r.ts).toISOString(),r.tripped?"yes":"",S.info.testerId,S.info.fixtureId,S.info.date,S.info.ramp].map(q).join(",")});
+  download("hipot-rr-"+new Date().toISOString().slice(0,10)+".csv",[head.map(q).join(",")].concat(rows).join("\r\n"),"text/csv")}
+function addReading(ma,tripped){
+  var part=partById(S.samples[cur.sample-1]),lim=limitsFor(part,cur.set),t=nextTrial(cur.set,cur.sample);if(t==null)return;
+  var r={id:uid(),set:cur.set,sample:cur.sample,trial:t,ma:ma,op:S.operator||S.operators[0]||"",pn:part.pn,status:part.status,v:num(S.volts[cur.set-1]),min:lim.min,max:lim.max,ts:Date.now(),tripped:!!tripped};
+  S.readings.push(r);save();
+  var ok=passed(r),good=correct(r),n=N();
+  flash={cls:good?"go":"stop",text:'Saved '+f3(ma)+' mA (sample '+r.sample+', trial '+t+') – '+(ok?'PASS':'FAIL')+(good?'':' · <u>WRONG CALL</u> for a Known-'+r.status+' part')+(tripped?' · tester tripped':'')};
+  if(t>=n){var np=nextPending();cur=np?{set:np.set,sample:np.sample}:cur;flash.text+=' · sample complete'+(np?', moved to sample '+np.sample+(np.set!==r.set?' at '+setLabel(np.set):''):' – study complete!')}
+  if(lim.max==null)flash.text+=' · ⚠ no max limit set for this part'
+  render()}
+document.addEventListener("submit",function(ev){var f=ev.target.id;
+  if(f==="entry"){ev.preventDefault();var inp=document.getElementById("ma"),v=num(inp.value.replace(",","."));
+    if(v==null||v<0){document.getElementById("entryErr").textContent="Enter the reading as a number, e.g. 1.842";inp.focus();return}
+    addReading(v,false)}
+  else if(f==="pinNew"){ev.preventDefault();var a=document.getElementById("pin1").value,b=document.getElementById("pin2").value;
+    if(a.length<4){pinMsg="PIN must be at least 4 characters";render();return}if(a!==b){pinMsg="PINs don't match";render();return}
+    sha("hipot-owner:"+a).then(function(h){S.ownerHash=h;save();ownerOpen=true;pinMsg="";render()})}
+  else if(f==="pinIn"){ev.preventDefault();sha("hipot-owner:"+document.getElementById("pin").value).then(function(h){if(h===S.ownerHash){ownerOpen=true;pinMsg=""}else pinMsg="Incorrect PIN";render()})}});
+function askPin(msg,cb){var p=prompt(msg);if(p==null)return;sha("hipot-owner:"+p).then(function(h){if(h===S.ownerHash)cb();else alert("Incorrect PIN")})}
+document.addEventListener("click",function(ev){
+  var el=ev.target.closest("[data-tab],[data-act],[data-rs],[data-del],[data-rmop],[data-rmpart]");if(!el)return;
+  if(el.dataset.tab){tab=el.dataset.tab;flash=tab==="test"?flash:null;render();window.scrollTo(0,0);return}
+  if(el.dataset.rs){resSet=el.dataset.rs;render();return}
+  if(el.dataset.del){var id=el.dataset.del;askPin("Owner PIN to delete this reading:",function(){S.readings=S.readings.filter(function(r){return r.id!==id});save();render()});return}
+  if(el.dataset.rmop!=null){S.operators.splice(+el.dataset.rmop,1);save();render();return}
+  if(el.dataset.rmpart!=null){var p=S.parts[+el.dataset.rmpart];if(S.readings.some(function(r){return S.samples.indexOf(p.id)>=0&&false})){}
+    if(confirm("Remove part "+(p.pn||"(no P/N)")+"? Samples using it will be unassigned.")){S.samples=S.samples.map(function(s){return s===p.id?"":s});S.parts.splice(+el.dataset.rmpart,1);save();render()}return}
+  switch(el.dataset.act){
+    case"next":var np=nextPending();if(np)cur={set:np.set,sample:np.sample};flash=null;render();break;
+    case"undo":var rs=rd(cur.set,cur.sample),l=rs[rs.length-1];if(l&&confirm("Delete the last reading ("+f3(l.ma)+" mA, trial "+l.trial+")?")){S.readings=S.readings.filter(function(r){return r.id!==l.id});save();flash=null;render()}break;
+    case"trip":var tm=num(S.info.tripMa);if(tm!=null&&confirm("Record the tester's trip reading ("+tm+" mA)? This counts as a reading."))addReading(tm,true);break;
+    case"csv":csv();break;
+    case"lock":ownerOpen=false;render();break;
+    case"addop":S.operators.push("");save();render();break;
+    case"addpart":S.parts.push({id:uid(),pn:"",status:"Good",min:"0",max:"",lim:{}});save();render();break;
+    case"backup":download("hipot-rr-backup-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(S),"application/json");break;
+    case"clearread":askPin("Owner PIN to delete ALL readings:",function(){if(confirm("Delete all "+S.readings.length+" readings? This cannot be undone."))S.readings=[],save(),render()});break;
+    case"changepin":askPin("Current owner PIN:",function(){S.ownerHash="";save();ownerOpen=false;pinMsg="";render()});break}});
+document.addEventListener("change",function(ev){var t=ev.target;
+  if(t.id==="selSet"){cur={set:+t.value,sample:cur.sample};flash=null;render()}
+  else if(t.id==="selSample"){cur={set:cur.set,sample:+t.value};flash=null;render()}
+  else if(t.id==="selOp"){S.operator=t.value;save();render()}
+  else if(t.id==="dataSet"){dataSet=+t.value;render()}
+  else if(t.id==="restore"){var f=t.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{var j=JSON.parse(fr.result);if(!j.info||!j.readings)throw 0;
+    if(confirm("Replace everything in this browser with the backup ("+j.readings.length+" readings)?")){var keep=S.ownerHash;S=j;if(!S.ownerHash)S.ownerHash=keep;save();render()}}catch(e){alert("That file isn't a valid backup.")}};fr.readAsText(f)}
+  else if(t.dataset.edit){var r=S.readings.find(function(x){return x.id===t.dataset.edit}),v=num(String(t.value).replace(",","."));if(r&&v!=null&&v>=0){r.ma=v;save()}render()}
+  else if(t.dataset.sample!=null){S.samples[+t.dataset.sample]=t.value;save();render()}
+  else if(t.dataset.path){var p=t.dataset.path,val=t.value;
+    if(/\.(min|max)$/.test(p)||/^volts\./.test(p)||p==="info.trials"||p==="info.tripMa"){if(val.trim()===""){val=""}else{var nv=num(val);val=nv==null?"":nv}}
+    setPath(p,val);save();if(/^(volts|parts\.\d+\.pn|parts\.\d+\.status|operators|info\.trials)/.test(p))render()}});
+render();
+})();
+</script>
+</body>
+</html>
