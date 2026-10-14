@@ -86,8 +86,8 @@ document.getElementById("gateForm").addEventListener("submit",function(ev){ev.pr
   sha(i.value.trim()).then(function(h){if(h===HASH){try{localStorage.setItem(GK,HASH)}catch(e){}gate.hidden=true;focusMa()}else{document.getElementById("gateErr").textContent="Incorrect passcode";i.value="";i.focus()}})});
 
 var D=load(),cur=null,msg="";
-function fresh(){return{operator:"",tester:"",volts:"500",notes:"",vals:{}}}  // vals["s-t"] = {ma,ts}
-function load(){try{var j=JSON.parse(localStorage.getItem(KEY));if(j&&j.vals)return Object.assign(fresh(),j)}catch(e){}return fresh()}
+function fresh(){return{operator:"",tester:"",volts:"600",notes:"",vals:{}}}  // vals["s-t"] = {ma,ts}
+function load(){try{var j=JSON.parse(localStorage.getItem(KEY));if(j&&j.vals){if(j.volts==="500"&&!Object.keys(j.vals).length)j.volts="600";return Object.assign(fresh(),j)}}catch(e){}return fresh()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){alert("Could not save in this browser (storage blocked or full). Download a backup now.")}}
 if(navigator.storage&&navigator.storage.persist)try{navigator.storage.persist()}catch(e){}
 function get(s,t){return D.vals[s+"-"+t]}
@@ -103,7 +103,7 @@ function render(){
   if(!cur||cur.s<1||cur.s>NS)cur=next()||{s:NS,t:NT};
   var n=count(),done=n===NS*NT,ex=get(cur.s,cur.t),e=document.getElementById("entry");
   var h=(msg?'<div class="flash" role="status">'+esc(msg)+'</div>':'')
-   +'<div class="target"><div><b>Voltage</b><span>'+esc(D.volts||"500")+' V</span></div><div><b>Sample</b><span>'+cur.s+' of '+NS+'</span></div><div><b>Trial</b><span>'+cur.t+' of '+NT+'</span></div></div>'
+   +'<div class="target"><div><b>Voltage</b><span>'+esc(D.volts||"600")+' V</span></div><div><b>Sample</b><span>'+cur.s+' of '+NS+'</span></div><div><b>Trial</b><span>'+cur.t+' of '+NT+'</span></div></div>'
    +(done?'<div class="flash">All '+NS*NT+' readings entered. Download your data below.</div>':'')
    +'<form id="f" autocomplete="off"><input id="ma" class="mA" type="text" inputmode="decimal" placeholder="0.000" aria-label="Leakage reading in milliamps" value="'+(ex?ex.ma:"")+'">'
    +'<div class="unit">mA'+(ex?' · editing a saved value':'')+'</div><div class="err" id="err" role="alert"></div>'
