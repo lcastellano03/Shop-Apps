@@ -311,7 +311,6 @@ const DEFAULTS = {
     needle: 25,           // needle reach below mount, mm (placeholder)
     rWindow: 720,         // R travel, ± deg
     nozzle0: 180,         // nozzle direction at R = 0 (180 = west) — verify
-    compensates: false,   // false = X/Y are head positions (include d, alpha from R calibration). true = controller tracks the tip itself: key tip XY only
     dSet: 0,
     dSets: [
       { name: 'Calibration (notes, 3D model)', d: 44.39, a: 8.64 },
@@ -383,11 +382,10 @@ function merge(base, over){
   return out;
 }
 let cfg = clone(DEFAULTS);
-// ver 2: 'compensates' now defaults to false. Older saves had it true, which silently ignored the R calibration (d, alpha).
-try { const s = localStorage.getItem(STORE_KEY); if (s){ const j = JSON.parse(s); cfg = merge(clone(DEFAULTS), j.cfg || {}); if ((j.ver || 1) < 2) cfg.machine.compensates = false; } } catch(e) {}
+try { const s = localStorage.getItem(STORE_KEY); if (s){ cfg = merge(clone(DEFAULTS), JSON.parse(s).cfg || {}); delete cfg.machine.compensates; } } catch(e) {}
 let sel = { prog: 'Flux', size: 2807, x: 80 };
 try { const s = localStorage.getItem(STORE_KEY); if (s && JSON.parse(s).sel) sel = {...sel, ...JSON.parse(s).sel}; } catch(e) {}
-function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify({ver: 2, cfg, sel})); } catch(e) {} }
+function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify({cfg, sel})); } catch(e) {} }
 
 /* ===================== math ===================== */
 const feat = () => (cfg.programs[sel.prog] || {}).feature;
@@ -403,7 +401,7 @@ function compute(){
   if (!part) { out.err = 'No part data for ' + sel.prog + ' ' + sel.size + '. Add it in Settings → Parts.'; return out; }
 
   const ds = M.dSets[M.dSet] || M.dSets[0];
-  const d = M.compensates ? 0 : ds.d, a = ds.a;
+  const d = ds.d, a = ds.a;
   const OD = prog.feature === 'OD';
   const r = OD ? part.dia / 2 + prog.clear : part.dia / 2 - prog.clear;
   const zoneTop = prog.lip, zoneBot = part.depth - part.teeth - prog.margin;
@@ -503,7 +501,7 @@ function render(){
     kvRow('Top of part Z', f2(o.topZ), isPH(pp + 'jigTop')) + kvRow('Lift Z', f2(o.liftZ), isPH('machine.lift')) +
     kvRow('Spiral Z', f2(o.Zs) + ' to ' + f2(o.Ze)) +
     grp('R-axis') +
-    kvRow('d / alpha', M.compensates ? 'compensated by controller' : f2(o.d) + ' / ' + f2(o.a), !M.compensates) +
+    kvRow('d / alpha', f2(o.d) + ' / ' + f2(o.a)) +
     kvRow('Path center', f2(o.Cx) + ', ' + f2(o.Cy));
 
   $('checks').innerHTML = o.checks.map(c => `<span class="chip ${c.ok ? '' : 'bad'}" title="${c.ok ? 'OK' : c.why}">${c.ok ? '✓' : '✕'} ${c.name}</span>`).join('');
@@ -520,9 +518,7 @@ function render(){
       `<td>${f2(x.X)}</td><td>${f2(x.Y)}</td><td>${f2(x.Z)}</td></tr>`;
   });
   $('tblBox').innerHTML = h + '</tbody></table>';
-  $('tblNote').textContent = M.compensates
-    ? 'Compensation ON (Settings): X/Y are tip positions only, the R calibration is NOT applied. If the nozzle goes to the wrong place on Arc Points, turn this off.'
-    : 'X/Y move the head to keep the tip on path while R turns (d, alpha).';
+  $('tblNote').textContent = 'X/Y move the head to keep the tip on path while R turns (d, alpha).';
   window._rows = o.rows;
   drawWall(o); drawTop(o);
   $('lgS2').hidden = cfg.pattern.spirals.length < 2;
@@ -629,7 +625,6 @@ function buildSettings(){
   g += `<div class="card"><h2>R-axis tip offset</h2>` +
     field('Active set', `<select data-path="machine.dSet" class="ph">${dOpts}</select>`, 'Unresolved: confirm or redo touch-off') +
     M.dSets.map((s, i) => field(`Set ${i + 1} d (mm)`, numIn(`machine.dSets.${i}.d`), s.name) + field(`Set ${i + 1} alpha (deg)`, numIn(`machine.dSets.${i}.a`))).join('') +
-    field('Controller compensates R', `<select data-path="machine.compensates" data-bool="1" class="ph"><option value="false" ${!M.compensates ? 'selected' : ''}>No</option><option value="true" ${M.compensates ? 'selected' : ''}>Yes</option></select>`, 'Yes = key tip XY only') +
     `</div>`;
   g += `<div class="card"><h2>Programs</h2>` + Object.keys(cfg.programs).map(n => {
     const b = 'programs.' + n + '.';
@@ -1054,7 +1049,7 @@ const V3 = {
       if (spiral){ const th = rad(L(a.th, c.th)), r = Math.hypot(a.tx, a.ty); tx = r * Math.cos(th); ty = r * Math.sin(th); }
       else { tx = L(a.tx, c.tx); ty = L(a.ty, c.ty); }
       const R = L(a.R, c.R), Z = L(a.Z, c.Z), b = a.b.map((v, k) => L(v, c.b[k]));
-      const o = G.o, dE = cfg.machine.compensates ? 0 : G.d;
+      const o = G.o, dE = G.d;
       const mX = o.Cx + dE * Math.cos(rad(R + G.al)) + tx, mY = o.Cy + dE * Math.sin(rad(R + G.al)) + ty;
       const Tx = G.Cx + tx, Ty = G.Cy + ty, Hx = Tx + G.d * Math.cos(rad(R + G.al)), Hy = Ty + G.d * Math.sin(rad(R + G.al));
       return { row: c, R, Z, b, Tx, Ty, Hx, Hy, mX, mY };
