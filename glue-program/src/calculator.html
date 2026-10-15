@@ -934,7 +934,8 @@ const V3 = {
       // R hub (rotates)
       cyl(20, 8, mAccent, 0, TOOL - 80, 0, NG, 40);
       box(14, TOOL - 84 - (BAR + 17), 14, mAlu, 0, (TOOL - 84 + BAR + 17) / 2, 0, NG);   // tool extension to barrel bracket
-      const tipL = new Tn.Vector3(-d * Math.cos(rad(al)), 0, d * Math.sin(rad(al))), topL = new Tn.Vector3(0, BAR + 17, 0);
+      const tipL = new Tn.Vector3(-d * Math.cos(rad(al)), 0, -d * Math.sin(rad(al))),   // z mirrored: R turns clockwise in the view (visual only)
+          topL = new Tn.Vector3(0, BAR + 17, 0);
       // bent needle + barrel (3D view only; tip point = calibrated tip, coordinates untouched)
       const B3 = cfg.barrel, h = new Tn.Vector3(tipL.x, 0, tipL.z).normalize(), UP = new Tn.Vector3(0, 1, 0);
       const dirUp = ang => UP.clone().multiplyScalar(Math.cos(rad(ang))).addScaledVector(h, -Math.sin(rad(ang)));
@@ -1052,7 +1053,8 @@ const V3 = {
       const o = G.o, dE = G.d;
       const mX = o.Cx + dE * Math.cos(rad(R + G.al)) + tx, mY = o.Cy + dE * Math.sin(rad(R + G.al)) + ty;
       const Tx = G.Cx + tx, Ty = G.Cy + ty, Hx = Tx + G.d * Math.cos(rad(R + G.al)), Hy = Ty + G.d * Math.sin(rad(R + G.al));
-      return { row: c, R, Z, b, Tx, Ty, Hx, Hy, mX, mY };
+      const Hz = Ty - G.d * Math.sin(rad(R + G.al));   // 3D view only: table Y that keeps the tip on the part with R shown clockwise
+      return { row: c, R, Z, b, Tx, Ty, Hx, Hy, Hz, mX, mY };
     }
     // camera
     Object.assign(presets, { Close: { th: 0.35, ph: 0.95, r: 125, follow: true }, Top: { th: 0.0001, ph: 0.3, r: 150, follow: true }, Front: { th: 0.0001, ph: 1.45, r: 150, follow: true } });
@@ -1086,13 +1088,13 @@ const V3 = {
       if (G && KF.length > 1 && !$('view3d').hidden){
         if (playing){ if (hold > 0){ hold -= dt; if (hold <= 0) tt = 0; } else { tt += dt * +$('spd3').value; if (tt >= TT){ tt = TT; hold = 1.5; } } $('pos3').value = Math.round(tt / TT * 1000); }
         const s = state(Math.min(tt, TT)), yTip = cfg.machine.homeZ - s.Z;
-        XC.position.x = s.Hx; T.position.z = s.Hy; V.clip.constant = V.cutOn ? (s.Hy - G.Cy) : 1e6; ZG.position.y = yTip; RG.rotation.y = rad(s.R);
+        XC.position.x = s.Hx; T.position.z = s.Hz; V.clip.constant = V.cutOn ? (s.Hz - G.Cy) : 1e6; ZG.position.y = yTip; RG.rotation.y = -rad(s.R);
         beads.forEach((g, k) => g.setDrawRange(0, Math.floor((s.b[k] || 0) * 240) * 6 * 6));
         const rw = s.row; $('h3a').textContent = (rw.step ? 'Step ' + rw.step + ': ' : '') + rw.name; $('h3b').textContent = rw.cmd ? 'Next point: ' + rw.cmd : '';
         $('h3x').textContent = f2(s.mX); $('h3y').textContent = f2(s.mY); $('h3z').textContent = f2(s.Z);
         $('h3tx').textContent = f2(s.Hx + G.d * Math.cos(rad(G.al))); $('h3ty').textContent = f2(s.Hy + G.d * Math.sin(rad(G.al))); $('h3r').textContent = f2(s.R);
         if (camT > 0){ const k = 1 - Math.pow(0.002, dt); ['th', 'ph', 'r'].forEach(n => view[n] += (goal[n] - view[n]) * k); if (!goal.follow) ['tx', 'ty', 'tz'].forEach(n => view[n] += (goal[n] - view[n]) * k); view.follow = goal.follow; if (Math.abs(goal.r - view.r) < 0.5) camT = 0; }
-        if (view.follow){ const k = camT > 0 ? 1 - Math.pow(0.002, dt) : 1; view.tx += (G.Cx - view.tx) * k; view.ty += (G.top - G.depth * 0.5 - view.ty) * k; view.tz += (s.Hy - G.Cy - view.tz) * k; }
+        if (view.follow){ const k = camT > 0 ? 1 - Math.pow(0.002, dt) : 1; view.tx += (G.Cx - view.tx) * k; view.ty += (G.top - G.depth * 0.5 - view.ty) * k; view.tz += (s.Hz - G.Cy - view.tz) * k; }
         const tg = new Tn.Vector3(view.tx, view.ty, view.tz);
         cam.position.set(tg.x + view.r * Math.sin(view.ph) * Math.sin(view.th), tg.y + view.r * Math.cos(view.ph), tg.z + view.r * Math.sin(view.ph) * Math.cos(view.th));
         cam.lookAt(tg); renderer.render(scene, cam);
