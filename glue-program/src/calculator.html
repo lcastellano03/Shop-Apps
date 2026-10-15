@@ -858,7 +858,9 @@ const V3 = {
     const ZG = new Tn.Group(); XC.add(ZG);               // Z slide (tip at origin)
     const ZS = new Tn.Group(); ZG.add(ZS);
     const RG = new Tn.Group(); ZG.add(RG);               // R rotation
-    const PG = new Tn.Group(); T.add(PG); const ST = new Tn.Group(); T.add(ST); const NG = new Tn.Group(); RG.add(NG);
+    const PG = new Tn.Group(); T.add(PG); const ST = new Tn.Group(); T.add(ST);
+    PG.scale.z = ST.scale.z = -1;   // view only: part + jigs mirrored so the tip travels clockwise (coordinates unchanged)
+    const NG = new Tn.Group(); RG.add(NG);
     const mCover = Mt(0xeceaf1, { roughness: 0.5 }), mTrim = Mt(0x2b2a33, { roughness: 0.55 }), mRail = Mt(0x8b8f99, { metalness: 0.7, roughness: 0.35 }),
       mTable = Mt(0xbfc3cc, { metalness: 0.65, roughness: 0.38 }), mRed = Mt(0xc8322f, { roughness: 0.4 }), mYel = Mt(0xf1c40f, { roughness: 0.5 }), mFloor = Mt(0xdcd8e6, { roughness: 0.95 });
     const rbox = (w, h, d, r, m, x, y, z, p) => { const s = new Tn.Shape(), a = w / 2, b = h / 2; r = Math.min(r, a, b);
@@ -1053,8 +1055,7 @@ const V3 = {
       const o = G.o, dE = G.d;
       const mX = o.Cx + dE * Math.cos(rad(R + G.al)) + tx, mY = o.Cy + dE * Math.sin(rad(R + G.al)) + ty;
       const Tx = G.Cx + tx, Ty = G.Cy + ty, Hx = Tx + G.d * Math.cos(rad(R + G.al)), Hy = Ty + G.d * Math.sin(rad(R + G.al));
-      const Hz = Ty - G.d * Math.sin(rad(R + G.al));   // 3D view only: table Y that keeps the tip on the part with R shown clockwise
-      return { row: c, R, Z, b, Tx, Ty, Hx, Hy, Hz, mX, mY };
+      return { row: c, R, Z, b, Tx, Ty, Hx, Hy, mX, mY };
     }
     // camera
     Object.assign(presets, { Close: { th: 0.35, ph: 0.95, r: 125, follow: true }, Top: { th: 0.0001, ph: 0.3, r: 150, follow: true }, Front: { th: 0.0001, ph: 1.45, r: 150, follow: true } });
@@ -1088,13 +1089,13 @@ const V3 = {
       if (G && KF.length > 1 && !$('view3d').hidden){
         if (playing){ if (hold > 0){ hold -= dt; if (hold <= 0) tt = 0; } else { tt += dt * +$('spd3').value; if (tt >= TT){ tt = TT; hold = 1.5; } } $('pos3').value = Math.round(tt / TT * 1000); }
         const s = state(Math.min(tt, TT)), yTip = cfg.machine.homeZ - s.Z;
-        XC.position.x = s.Hx; T.position.z = s.Hz; V.clip.constant = V.cutOn ? (s.Hz - G.Cy) : 1e6; ZG.position.y = yTip; RG.rotation.y = -rad(s.R);
+        XC.position.x = s.Hx; T.position.z = -s.Hy; V.clip.constant = V.cutOn ? (G.Cy - s.Hy) : 1e6; ZG.position.y = yTip; RG.rotation.y = -rad(s.R);
         beads.forEach((g, k) => g.setDrawRange(0, Math.floor((s.b[k] || 0) * 240) * 6 * 6));
         const rw = s.row; $('h3a').textContent = (rw.step ? 'Step ' + rw.step + ': ' : '') + rw.name; $('h3b').textContent = rw.cmd ? 'Next point: ' + rw.cmd : '';
         $('h3x').textContent = f2(s.mX); $('h3y').textContent = f2(s.mY); $('h3z').textContent = f2(s.Z);
         $('h3tx').textContent = f2(s.Hx + G.d * Math.cos(rad(G.al))); $('h3ty').textContent = f2(s.Hy + G.d * Math.sin(rad(G.al))); $('h3r').textContent = f2(s.R);
         if (camT > 0){ const k = 1 - Math.pow(0.002, dt); ['th', 'ph', 'r'].forEach(n => view[n] += (goal[n] - view[n]) * k); if (!goal.follow) ['tx', 'ty', 'tz'].forEach(n => view[n] += (goal[n] - view[n]) * k); view.follow = goal.follow; if (Math.abs(goal.r - view.r) < 0.5) camT = 0; }
-        if (view.follow){ const k = camT > 0 ? 1 - Math.pow(0.002, dt) : 1; view.tx += (G.Cx - view.tx) * k; view.ty += (G.top - G.depth * 0.5 - view.ty) * k; view.tz += (s.Hz - G.Cy - view.tz) * k; }
+        if (view.follow){ const k = camT > 0 ? 1 - Math.pow(0.002, dt) : 1; view.tx += (G.Cx - view.tx) * k; view.ty += (G.top - G.depth * 0.5 - view.ty) * k; view.tz += (G.Cy - s.Hy - view.tz) * k; }
         const tg = new Tn.Vector3(view.tx, view.ty, view.tz);
         cam.position.set(tg.x + view.r * Math.sin(view.ph) * Math.sin(view.th), tg.y + view.r * Math.cos(view.ph), tg.z + view.r * Math.sin(view.ph) * Math.cos(view.th));
         cam.lookAt(tg); renderer.render(scene, cam);
