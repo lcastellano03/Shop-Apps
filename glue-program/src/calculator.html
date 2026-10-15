@@ -511,11 +511,10 @@ function render(){
      (v == null || v === '') ? 'set weight' : f2(M.psiSlope * v + M.psiInt) + ' psi', v == null || v === '')).join('');
 
   // table
-  let h = '<table><thead><tr><th>#</th><th class="l">Step</th><th class="l">Command</th><th>Bead °</th><th>R</th><th>X</th><th>Y</th><th>Z</th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>#</th><th class="l">Step</th><th class="l">Command</th><th>X</th><th>Y</th><th>Z</th><th>R</th></tr></thead><tbody>';
   o.rows.forEach(x => {
     h += `<tr class="${x.cls}${x.cls === 'mv' ? '' : ''}"><td>${x.step}</td><td class="l">${x.name}</td><td class="l">${x.cmd}</td>` +
-      `<td>${x.th === null ? '' : f2(x.th)}</td><td>${f2(x.R)}</td>` +
-      `<td>${f2(x.X)}</td><td>${f2(x.Y)}</td><td>${f2(x.Z)}</td></tr>`;
+      `<td>${f2(x.X)}</td><td>${f2(x.Y)}</td><td>${f2(x.Z)}</td><td>${f2(x.R)}</td></tr>`;
   });
   $('tblBox').innerHTML = h + '</tbody></table>';
   $('tblNote').textContent = 'X/Y move the head to keep the tip on path while R turns (d, alpha).';
@@ -582,8 +581,8 @@ const getVar = n => getComputedStyle(document.documentElement).getPropertyValue(
 
 /* ===================== export / copy ===================== */
 function tableText(sep){
-  const head = ['#','Step','Command','Bead deg','R','X','Y','Z'];
-  const rows = (window._rows || []).map(x => [x.step, x.name, x.cmd, x.th === null ? '' : f2(x.th), f2(x.R), f2(x.X), f2(x.Y), f2(x.Z)]);
+  const head = ['#','Step','Command','X','Y','Z','R'];
+  const rows = (window._rows || []).map(x => [x.step, x.name, x.cmd, f2(x.X), f2(x.Y), f2(x.Z), f2(x.R)]);
   return [head, ...rows].map(r => r.map(v => sep === ',' && /[",]/.test(v) ? `"${String(v).replace(/"/g, '""')}"` : v).join(sep)).join('\n');
 }
 function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 1600); }
