@@ -21,6 +21,8 @@ h2{font-size:20px;margin:26px 0 10px;color:var(--ink)}
 .target b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .target span{font-size:26px;font-weight:700;color:var(--ink)}
 .mA{width:100%;font-size:46px;font-weight:700;text-align:center;min-height:78px;padding:6px 10px;border:2px solid var(--edge-2);border-radius:10px;background:var(--panel)}
+.vin{width:130px;font-size:26px;font-weight:700;color:var(--ink);padding:2px 10px;border:2px solid var(--edge-2);border-radius:8px;background:var(--panel);min-height:44px}
+.target label{font:inherit;color:inherit}
 .unit{text-align:center;color:var(--muted);font-size:14px;margin:4px 0 10px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--edge-2);background:var(--panel);color:var(--ink);font-weight:700;cursor:pointer}
 .btn.primary{background:var(--btn);border-color:var(--btn);color:#fff;width:100%;min-height:58px;font-size:19px}
@@ -71,7 +73,6 @@ input.t{width:100%;min-height:42px;padding:4px 10px;border:1.5px solid var(--edg
 <details class="card"><summary>Study details (optional)</summary>
 <div class="g3"><div><label class="f" for="op">Operator</label><input class="t" id="op" data-k="operator"></div>
 <div><label class="f" for="tid">Hipot tester ID</label><input class="t" id="tid" data-k="tester"></div>
-<div><label class="f" for="volts">Test voltage (V)</label><input class="t" id="volts" data-k="volts" inputmode="decimal"></div>
 <div><label class="f" for="nt">Notes</label><input class="t" id="nt" data-k="notes"></div></div>
 <p style="margin-top:14px"><button class="btn sm danger" data-act="reset">Delete all readings…</button></p></details>
 </main>
@@ -86,8 +87,8 @@ document.getElementById("gateForm").addEventListener("submit",function(ev){ev.pr
   sha(i.value.trim()).then(function(h){if(h===HASH){try{localStorage.setItem(GK,HASH)}catch(e){}gate.hidden=true;focusMa()}else{document.getElementById("gateErr").textContent="Incorrect passcode";i.value="";i.focus()}})});
 
 var D=load(),cur=null,msg="";
-function fresh(){return{operator:"",tester:"",volts:"600",notes:"",vals:{}}}  // vals["s-t"] = {ma,ts}
-function load(){try{var j=JSON.parse(localStorage.getItem(KEY));if(j&&j.vals){if(j.volts==="500"&&!Object.keys(j.vals).length)j.volts="600";return Object.assign(fresh(),j)}}catch(e){}return fresh()}
+function fresh(){return{operator:"",tester:"",volts:"",notes:"",vals:{}}}  // vals["s-t"] = {ma,ts}
+function load(){try{var j=JSON.parse(localStorage.getItem(KEY));if(j&&j.vals){var ks=Object.keys(j.vals);if(!ks.length)j.volts="";else ks.forEach(function(k){if(j.vals[k].v==null)j.vals[k].v=parseFloat(j.volts)||null});return Object.assign(fresh(),j)}}catch(e){}return fresh()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){alert("Could not save in this browser (storage blocked or full). Download a backup now.")}}
 if(navigator.storage&&navigator.storage.persist)try{navigator.storage.persist()}catch(e){}
 function get(s,t){return D.vals[s+"-"+t]}
@@ -97,18 +98,19 @@ function next(){for(var s=1;s<=NS;s++)for(var t=1;t<=NT;t++)if(!get(s,t))return{
 function count(){return Object.keys(D.vals).length}
 function stats(s){var v=[];for(var t=1;t<=NT;t++){var r=get(s,t);if(r)v.push(r.ma)}if(!v.length)return{};
   var m=v.reduce(function(a,b){return a+b},0)/v.length,sd=v.length>1?Math.sqrt(v.reduce(function(a,b){return a+(b-m)*(b-m)},0)/(v.length-1)):null;return{m:m,sd:sd}}
-function focusMa(){var m=document.getElementById("ma");if(m&&gate.hidden)m.focus()}
+function focusMa(){var m=document.getElementById(D.volts?"ma":"vin");if(m&&gate.hidden)m.focus()}
 
 function render(){
   if(!cur||cur.s<1||cur.s>NS)cur=next()||{s:NS,t:NT};
   var n=count(),done=n===NS*NT,ex=get(cur.s,cur.t),e=document.getElementById("entry");
   var h=(msg?'<div class="flash" role="status">'+esc(msg)+'</div>':'')
-   +'<div class="target"><div><b>Voltage</b><span>'+esc(D.volts||"600")+' V</span></div><div><b>Sample</b><span>'+cur.s+' of '+NS+'</span></div><div><b>Trial</b><span>'+cur.t+' of '+NT+'</span></div></div>'
+   +'<div class="target"><div><b><label for="vin">Voltage (V)</label></b><input id="vin" class="vin" type="text" inputmode="decimal" placeholder="e.g. 600" aria-label="Test voltage in volts" value="'+esc(D.volts)+'"></div><div><b>Sample</b><span>'+cur.s+' of '+NS+'</span></div><div><b>Trial</b><span>'+cur.t+' of '+NT+'</span></div></div>'
    +(done?'<div class="flash">All '+NS*NT+' readings entered. Download your data below.</div>':'')
    +'<form id="f" autocomplete="off"><input id="ma" class="mA" type="text" inputmode="decimal" placeholder="0.000" aria-label="Leakage reading in milliamps" value="'+(ex?ex.ma:"")+'">'
    +'<div class="unit">mA'+(ex?' · editing a saved value':'')+'</div><div class="err" id="err" role="alert"></div>'
    +'<button class="btn primary" type="submit">'+(ex?'Update reading':'Save reading')+'</button></form>'
    +'<div class="bar" aria-hidden="true"><i style="width:'+Math.round(100*n/(NS*NT))+'%"></i></div><p class="note">'+n+' of '+NS*NT+' readings done.</p>'
+   +(mixedV()?'<p class="note" style="color:var(--stop)">Heads up: readings so far were taken at different voltages ('+mixedV()+' V).</p>':'')
    +'<div class="row"><button class="btn sm" data-act="back">← Previous</button><button class="btn sm" data-act="fwd">Skip →</button><button class="btn sm" data-act="nextopen">Go to next empty</button><button class="btn sm danger" data-act="del"'+(ex?'':' disabled')+'>Clear this reading</button></div>';
   e.innerHTML=h;
   var g='<thead><tr><th>Sample</th>';for(var t=1;t<=NT;t++)g+='<th>T'+t+'</th>';g+='<th>Mean</th><th>σ</th></tr></thead><tbody>';
@@ -116,16 +118,21 @@ function render(){
     for(t=1;t<=NT;t++){var r=get(s,t);if(!r)full=false;row+='<td class="c '+(r?'done':'empty')+(cur.s===s&&cur.t===t?' cur':'')+'" data-s="'+s+'" data-t="'+t+'">'+(r?f3(r.ma):"·")+'</td>'}
     g+='<tr'+(full?' class="full"':'')+'><td>'+s+'</td>'+row+'<td>'+f3(st.m)+'</td><td>'+f3(st.sd)+'</td></tr>'}
   document.getElementById("grid").innerHTML=g+'</tbody>';
-  ["operator","tester","volts","notes"].forEach(function(k){var i=document.querySelector('[data-k="'+k+'"]');if(i&&document.activeElement!==i)i.value=D[k]||""});
+  ["operator","tester","notes"].forEach(function(k){var i=document.querySelector('[data-k="'+k+'"]');if(i&&document.activeElement!==i)i.value=D[k]||""});
   focusMa()}
 
+function mixedV(){var u={};Object.keys(D.vals).forEach(function(k){u[D.vals[k].v]=1});var a=Object.keys(u).filter(function(x){return x!=="null"&&x!=="undefined"});return a.length>1?a.join(", "):""}
 function advance(){var n=next();if(n)cur=n;else cur={s:NS,t:NT}}
 document.addEventListener("submit",function(ev){if(ev.target.id!=="f")return;ev.preventDefault();
   var i=document.getElementById("ma"),v=parseFloat(i.value.replace(",","."));
   if(!isFinite(v)||v<0||i.value.trim()===""){document.getElementById("err").textContent="Enter the reading as a number, e.g. 1.842";i.focus();return}
-  var wasEdit=!!get(cur.s,cur.t);D.vals[cur.s+"-"+cur.t]={ma:v,ts:Date.now()};save();
+  var vin=document.getElementById("vin"),vv=parseFloat(String(vin.value).replace(",","."));
+  if(!isFinite(vv)||vv<=0){document.getElementById("err").textContent="Enter the test voltage (V) first";vin.focus();return}
+  D.volts=String(vv);
+  var wasEdit=!!get(cur.s,cur.t);D.vals[cur.s+"-"+cur.t]={ma:v,v:vv,ts:Date.now()};save();
   msg=(wasEdit?"Updated ":"Saved ")+v.toFixed(3)+" mA (sample "+cur.s+", trial "+cur.t+")";
   var s0=cur.s;advance();if(cur.s!==s0&&!wasEdit)msg+=" · sample "+s0+" complete";render()});
+document.addEventListener("keydown",function(ev){if(ev.target.id==="vin"&&ev.key==="Enter"){ev.preventDefault();var n=parseFloat(String(ev.target.value).replace(",","."));D.volts=isFinite(n)&&n>0?String(n):"";save();var m=document.getElementById("ma");if(m)m.focus()}});
 document.addEventListener("click",function(ev){
   var c=ev.target.closest("td.c");if(c){cur={s:+c.dataset.s,t:+c.dataset.t};msg="";render();window.scrollTo(0,0);return}
   var b=ev.target.closest("[data-act]");if(!b)return;
@@ -137,7 +144,8 @@ document.addEventListener("click",function(ev){
     case"csv":csv();break;case"gridcsv":gridcsv();break;case"copy":copy();break;case"json":dl("hipot-quick-backup-"+day()+".json",JSON.stringify(D),"application/json");break;
     case"reset":if(count()&&prompt("This deletes all "+count()+" readings. Type DELETE to confirm.")==="DELETE"){D=Object.assign(fresh(),{operator:D.operator,tester:D.tester,volts:D.volts});save();cur=null;msg="";render()}break}});
 document.addEventListener("change",function(ev){var t=ev.target;
-  if(t.dataset.k){D[t.dataset.k]=t.value;save();if(t.dataset.k==="volts")render()}
+  if(t.id==="vin"){var n=parseFloat(String(t.value).replace(",","."));D.volts=isFinite(n)&&n>0?String(n):"";save()}
+  else if(t.dataset.k){D[t.dataset.k]=t.value;save()}
   else if(t.id==="restore"){var f=t.files[0];if(!f)return;var fr=new FileReader();fr.onload=function(){try{var j=JSON.parse(fr.result);if(!j.vals)throw 0;
     if(confirm("Replace the current data with this backup ("+Object.keys(j.vals).length+" readings)?")){D=Object.assign(fresh(),j);save();cur=null;msg="";render()}}catch(x){alert("That isn't a valid backup file.")}};fr.readAsText(f)}});
 function day(){return new Date().toISOString().slice(0,10)}
@@ -145,7 +153,7 @@ function dl(name,text,type){var a=document.createElement("a");a.href=URL.createO
 function q(x){x=x==null?"":String(x);return/[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x}
 function csv(){  // same column names as the main app / workbook "Test Data" sheet
   var rows=[["Sample #","Trial #","Operator","Test Voltage (V)","Actual Test Result (mA)","Timestamp","Hipot Tester ID","Notes"].map(q).join(",")];
-  for(var s=1;s<=NS;s++)for(var t=1;t<=NT;t++){var r=get(s,t);if(r)rows.push([s,t,D.operator,D.volts,r.ma,new Date(r.ts).toISOString(),D.tester,D.notes].map(q).join(","))}
+  for(var s=1;s<=NS;s++)for(var t=1;t<=NT;t++){var r=get(s,t);if(r)rows.push([s,t,D.operator,r.v!=null?r.v:D.volts,r.ma,new Date(r.ts).toISOString(),D.tester,D.notes].map(q).join(","))}
   dl("hipot-quick-"+day()+".csv",rows.join("\r\n"),"text/csv")}
 function gridRows(sep){var rows=[["Sample"].concat(Array.from({length:NT},function(_,i){return"Trial "+(i+1)})).join(sep)];
   for(var s=1;s<=NS;s++){var r=[s];for(var t=1;t<=NT;t++){var x=get(s,t);r.push(x?x.ma:"")}rows.push(r.join(sep))}return rows.join("\r\n")}
